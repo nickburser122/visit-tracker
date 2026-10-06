@@ -102,25 +102,40 @@ function renderTop() {
   on("act-tpl", () => IO.template(false));
   on("theme-btn", () => { S.theme = { system: "dark", dark: "light", light: "system" }[S.theme]; localStorage.setItem(KEY.theme, S.theme); applyTheme(); UI.toast(document.getElementById("theme-btn").title); });
   applyTheme();
+  renderTabs(has);
+}
+
+function renderTabs(has) {
   const tabs = document.getElementById("main-tabs");
   tabs.classList.toggle("hidden", !has);
-  if (has) {
-    const unk = Object.values(ENG.M.meta.unknown).filter(o => !o.city).length;
-    const T = [["dash", "المؤشرات"], ["visits", "الزيارات", ENG.M.visits.length], ["people", "الأفراد", Object.keys(ENG.M.meta.people).length], ["prices", "الإعدادات", unk || null, unk ? "warn" : ""]];
-    tabs.innerHTML = T.map(([k, l, c, cls], i) => '<button class="tab" role="tab" aria-selected="' + (S.tab === k) + '" data-tab="' + k + '" title="Alt+' + (i + 1) + '">' + l + (c != null ? '<span class="cnt ' + (cls || "") + '">' + c + "</span>" : "") + "</button>").join("") + '<span class="tab-ink" aria-hidden="true"></span>';
+  if (!has) { tabs.innerHTML = ""; return; }
+  const unk = Object.values(ENG.M.meta.unknown).filter(o => !o.city).length;
+  const T = [["dash", "المؤشرات"], ["visits", "الزيارات", ENG.M.visits.length], ["people", "الأفراد", Object.keys(ENG.M.meta.people).length], ["prices", "الإعدادات", unk || null, unk ? "warn" : ""]];
+  if (!tabs.querySelector(".tab-ink")) {
+    tabs.innerHTML = T.map(([k], i) => '<button class="tab" role="tab" data-tab="' + k + '" title="Alt+' + (i + 1) + '"></button>').join("") + '<span class="tab-ink" aria-hidden="true"></span>';
     tabs.onclick = e => { const b = e.target.closest("[data-tab]"); if (b) setTab(b.dataset.tab); };
-    requestAnimationFrame(moveInk);
   }
+  T.forEach(([k, l, c, cls]) => {
+    const b = tabs.querySelector('[data-tab="' + k + '"]');
+    const h = l + (c != null ? '<span class="cnt ' + (cls || "") + '">' + c + "</span>" : "");
+    b.setAttribute("aria-selected", S.tab === k);
+    if (b.dataset.h !== h) { b.dataset.h = h; b.innerHTML = h; }
+  });
+  requestAnimationFrame(() => moveInk(!tabs.querySelector(".tab-ink.on")));
 }
-function moveInk() {
+function moveInk(snap) {
   const tabs = document.getElementById("main-tabs"), a = tabs.querySelector('[aria-selected="true"]'), ink = tabs.querySelector(".tab-ink");
-  if (!a || !ink) return;
+  if (!a || !ink || !a.offsetWidth) return;
+  if (snap) ink.style.transition = "none";
   ink.style.width = a.offsetWidth + "px";
-  ink.style.transform = "translateX(" + (a.offsetLeft) + "px)";
+  ink.style.transform = "translateX(" + a.offsetLeft + "px)";
+  if (snap) { void ink.offsetWidth; ink.style.transition = ""; }
   ink.classList.add("on");
   if (a.offsetLeft < tabs.scrollLeft || a.offsetLeft + a.offsetWidth > tabs.scrollLeft + tabs.clientWidth) a.scrollIntoView({ inline: "center", block: "nearest" });
 }
-addEventListener("resize", () => UI.schedule(moveInk));
+const snapInk = () => moveInk(true);
+addEventListener("resize", () => UI.schedule(snapInk));
+document.fonts?.ready.then(() => UI.schedule(snapInk));
 
 function renderView() {
   const v = document.getElementById("view");
@@ -128,7 +143,6 @@ function renderView() {
   const fn = { dash: VIEWS.dash, visits: VIEWS.visits, people: VIEWS.people, prices: VIEWS.prices }[S.tab] || VIEWS.dash;
   fn(v);
 }
-const renderBody = renderView;
 
 let mounted = false;
 function render() {

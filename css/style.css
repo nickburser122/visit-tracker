@@ -78,12 +78,12 @@ kbd{font:inherit;font-size:11px;color:var(--mu);border:1px solid var(--ln2);bord
 .tabs{display:flex;gap:2px;padding:5px;background:color-mix(in srgb,var(--pn) 88%,transparent);backdrop-filter:blur(14px) saturate(1.4);-webkit-backdrop-filter:blur(14px) saturate(1.4);border:1px solid var(--ln);border-radius:999px;overflow-x:auto;scrollbar-width:none;margin-bottom:12px;position:sticky;top:10px;z-index:30;transition:box-shadow .2s}
 body.scrolled .tabs{box-shadow:var(--sh)}
 .tabs::-webkit-scrollbar{display:none}
-.tab{position:relative;z-index:1;border-radius:999px;padding:9px 18px;color:var(--mu);white-space:nowrap;display:inline-flex;gap:8px;align-items:center;flex:none;transition:color .2s}
+.tab{position:relative;z-index:1;border-radius:999px;padding:9px 18px;color:var(--mu);white-space:nowrap;display:inline-flex;gap:8px;align-items:center;flex:none;transition:color .2s;user-select:none}
 .tab:hover{color:var(--mk)}
+.tab:focus-visible{outline-offset:-2px}
 .tab[aria-selected=true]{color:var(--ink);font-weight:500}
 .tab-ink{position:absolute;top:5px;bottom:5px;left:0;border-radius:999px;background:var(--mk);z-index:0;pointer-events:none;opacity:0}
-.tab-ink.on{opacity:1;transition:transform .32s var(--ease),width .32s var(--ease)}
-.tabs{position:sticky}
+.tab-ink.on{opacity:1;transition:transform .32s var(--ease),width .32s var(--ease),opacity .2s}
 .tab .cnt{font-size:11px;background:var(--pn3);color:var(--mk2);border-radius:999px;padding:0 7px;transition:background .2s,color .2s}
 .tab[aria-selected=true] .cnt{background:var(--fa);color:var(--ink)}
 .tab .cnt.warn{background:var(--warn);color:#1d1d1b}
