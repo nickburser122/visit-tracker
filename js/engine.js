@@ -383,7 +383,7 @@ const ENG = (() => {
   function serviceCount(ek) {
     const st = S.settings;
     if (st.exceptionsOn) {
-      const ex = st.exceptions.find(x => x.name && (ek.includes(NZ(x.name)) || NZ(x.name).includes(ek)));
+      const ex = st.exceptions.find(x => x.name && (ek.includes(NZ(x.name)) || (ek.includes(" ") && NZ(x.name).includes(ek))));
       if (ex) return { n: +ex.count || st.serviceDefault, ex: true };
     }
     return { n: st.serviceDefault, ex: false };

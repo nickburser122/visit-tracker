@@ -7,6 +7,9 @@ const S = {
   filters: BLANK_FILTERS()
 };
 
+const NEW_EXCEPTIONS = [["دمنهور مسائي", 4], ["ادارة المنطقة الثانية", 4]];
+const addException = (list, name, count) => list.some(x => NZ(x.name) === NZ(name)) ? list : [...list, { name, count }];
+
 function loadStore() {
   const base = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
   try {
@@ -18,7 +21,7 @@ function loadStore() {
         km: v >= 5 ? { ...base.km, ...(s.km || {}) } : base.km,
         allow: { ...base.allow, ...(s.allow || {}) },
         servicePrice: v >= 5 ? s.servicePrice : base.servicePrice,
-        exceptions: v >= 5 ? s.exceptions : (s.exceptions || base.exceptions).filter(x => NZ(x.name) !== NZ("المخازن الطبية")),
+        exceptions: v >= 8 ? s.exceptions : NEW_EXCEPTIONS.reduce((l, [n, c]) => addException(l, n, c), v >= 5 ? s.exceptions || base.exceptions : (s.exceptions || base.exceptions).filter(x => NZ(x.name) !== NZ("المخازن الطبية"))),
         zeroEntities: s.zeroEntities || base.zeroEntities,
         classAmount: { ...base.classAmount, ...(s.classAmount || {}) },
         carAllowance: { ...base.carAllowance, ...(s.carAllowance || {}) },

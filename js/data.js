@@ -234,7 +234,7 @@ const ENTITY_INFO = (() => {
 const DEFAULT_PEOPLE = { "اباظة": 1, "لبنى": 1, "أماني": 1, "غادة": 1, "شوقي": 2, "شلتوت": 2, "هنداوي": 1, "أديب": 1, "صبحي": 1 };
 
 const DEFAULT_SETTINGS = {
-  v: 6,
+  v: 8,
   entities: {},
   org: { name: "الهيئة العامة للتأمين الصحي", branch: "فرع البحيرة", title: "كشف بدلات الانتقال والسفر", signs: ["المختص", "المراجع", "مدير الإدارة"] },
   prices: Object.fromEntries(CITY_DEFS.map(d => [d[0], d[1]])),
@@ -251,7 +251,7 @@ const DEFAULT_SETTINGS = {
   servicePrice: SERVICE_TARIFF,
   serviceDefault: 2,
   exceptionsOn: true,
-  exceptions: [{ name: "عيادة دمنهور الشاملة", count: 4 }],
+  exceptions: [{ name: "عيادة دمنهور الشاملة", count: 4 }, { name: "دمنهور مسائي", count: 4 }, { name: "ادارة المنطقة الثانية", count: 4 }],
   people: Object.fromEntries(Object.entries(DEFAULT_PEOPLE).map(([k, v]) => [NZ(k).replace(/^ال/, ""), { name: k, cls: v }])),
   defaultClass: 3,
   entityCity: {},
