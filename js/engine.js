@@ -532,5 +532,11 @@ const ENG = (() => {
     return { visits, items, persons, total, miss };
   }
 
-  return { M, analyze, remap, rememberCols, headersOf, mergeRows, build, filter, registerPeople, purposeCat, personKey, toDate, dateParts, splitPeople, BANDS, bandLabel, kmOf, isFar, zeroHit, resolve: e => (resolver || (resolver = makeResolver()))(e), SETTING_SHEETS, HEAD_KEYS: ["d", "e", "g", "p", "c"] };
+  function nocarCost(v, p) {
+    let s = 0;
+    for (const l of lines(v, { ...p, car: false })) { if (l.a == null) return null; s += l.a; }
+    return s;
+  }
+
+  return { M, nocarCost, analyze, remap, rememberCols, headersOf, mergeRows, build, filter, registerPeople, purposeCat, personKey, toDate, dateParts, splitPeople, BANDS, bandLabel, kmOf, isFar, zeroHit, resolve: e => (resolver || (resolver = makeResolver()))(e), SETTING_SHEETS, HEAD_KEYS: ["d", "e", "g", "p", "c"] };
 })();

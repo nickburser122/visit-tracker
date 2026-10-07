@@ -73,7 +73,8 @@ const UI = (() => {
     document.body.append(bd, pop);
     bd.addEventListener("click", () => close());
     document.addEventListener("pointerdown", e => { if (cur && !cur.sheet && !pop.contains(e.target) && !cur.anchor.contains(e.target)) close(); }, true);
-    addEventListener("resize", () => cur && place());
+    let wasMobile = mobile();
+    addEventListener("resize", () => { const m = mobile(); if (m !== wasMobile && cur) { wasMobile = m; close(); return; } wasMobile = m; cur && place(); });
     addEventListener("scroll", e => { if (cur && !cur.sheet && !pop.contains(e.target)) place(); }, { capture: true, passive: true });
     document.addEventListener("keydown", e => { if (e.key === "Escape" && cur) { e.stopPropagation(); const a = cur.anchor; close(); a.focus && a.focus({ preventScroll: true }); } }, true);
     return pop;

@@ -41,85 +41,83 @@ const VIEWS = (() => {
     return [...o.entries()].sort((a, b) => b[1].n.size - a[1].n.size);
   }
 
+  const KIND = [["travel", "انتقال ذهاب وعودة"], ["class", "بدل داخلي"], ["service", "سيرفيس دمنهور"], ["allow", "بدل سفر بالسيارة"]];
+  const KC = ["var(--c1)", "var(--c2)", "var(--c3)", "var(--mk2)"];
+  const bySum = list => list.sort((a, b) => b[1].sum - a[1].sum);
+  const delta = (cur, prev) => { if (!prev) return ""; const d = Math.round((cur - prev) / prev * 100); return '<span class="dl' + (d > 0 ? " up" : d < 0 ? " dn" : "") + '">' + (d > 0 ? "▲ " : d < 0 ? "▼ " : "") + Math.abs(d) + "%</span>"; };
+
   function dash(v) {
     const R = currentResult();
     const vis = R.visits;
     if (!vis.length) { v.innerHTML = emptyBox("لا توجد زيارات تطابق التصفية الحالية"); return; }
     const { total, miss } = R;
     const parts = R.items.length;
-    let pc = 0, carMoney = 0, inD = 0, inSum = 0, plan = 0, insp = 0, mixed = 0, kmV = 0, kmP = 0, far = 0, farCar = 0, nearCar = 0, zero = 0;
     const kind = { travel: 0, class: 0, service: 0, allow: 0 };
+    let pc = 0, saved = 0, inSum = 0, inN = 0;
+    const days = new Set(), months = {};
+    for (const x of vis) { days.add(x.d); if (x.city === DAMANHOUR) inN++; (months[x.m] || (months[x.m] = { n: 0, sum: 0 })).n++; }
     for (const it of R.items) {
-      if (it.p.car) { pc++; carMoney += it.sum; if (it.v.band === "far") farCar++; else if (it.v.city !== DAMANHOUR && it.v.band !== "?") nearCar++; }
-      if (it.v.city === DAMANHOUR) inSum += it.sum;
-      kmP += (it.v.km || 0) * 2;
       for (const k in it.k) kind[k] += it.k[k];
+      months[it.v.m].sum += it.sum;
+      if (it.v.city === DAMANHOUR) inSum += it.sum;
+      if (it.p.car) { pc++; const alt = ENG.nocarCost(it.v, it.p); if (alt != null) saved += Math.max(0, alt - it.sum); }
     }
-    const days = new Set();
-    for (const x of vis) { days.add(x.d); if (x.cat === "plan") plan++; else if (x.cat === "insp") insp++; if (x.city === DAMANHOUR) inD++; if (x.mode === "mixed") mixed++; kmV += (x.km || 0) * 2; if (x.band === "far") far++; if (x.zero) zero++; }
-    const vc = vis.filter(x => x.carN > 0).length;
-    const oth = vis.length - plan - insp;
+    const mk = Object.keys(months).sort(), nM = mk.length;
+    const outSum = total - inSum;
     const top = R.persons[0];
+
+    let prev = null;
+    const pv = PICKER.prev();
+    if (pv && pv.to >= bounds().a) { const P = ENG.filter({ ...S.filters, from: pv.from, to: pv.to, months: [] }); if (P.visits.length) prev = { sum: P.total, n: P.visits.length, label: pv.label }; }
 
     const unkN = Object.values(ENG.M.meta.unknown).filter(o => !o.city).length;
     let h = "";
-    if (unkN || miss) h += '<div class="alert">' + icons.warn + "<span>" + (unkN ? unkN + " جهة بلا مدينة" : "") + (unkN && miss ? " · " : "") + (miss ? miss + " بند بلا سعر" : "") + "</span><button class=\"btn sm\" data-goset>مراجعة</button></div>";
-    h += '<div class="kpis">' +
-      '<div class="kpi hero"><span class="k-l">إجمالي المستحق</span><span class="k-v">' + fm(total) + '<small>جنيه</small></span><span class="k-s">' + (miss ? "+" + miss + " بلا سعر" : "") + "</span></div>" +
-      '<div class="kpi"><span class="k-l">الزيارات</span><span class="k-v">' + vis.length + '</span><span class="k-s">' + parts + " مشاركة · " + days.size + " يوم · " + (parts / vis.length).toFixed(1) + " فرد/زيارة</span></div>" +
-      '<div class="kpi"><span class="k-l">بسيارة الهيئة</span><span class="k-v">' + pct(vc, vis.length) + '<small>%</small></span><span class="k-s">' + vc + " زيارة · " + pc + ' مشاركة</span><div class="ratio"><i style="width:' + pct(vc, vis.length) + '%"></i></div></div>' +
-      '<div class="kpi"><span class="k-l">خطة / فحص</span><span class="k-v">' + plan + "<small>/ " + insp + '</small></span><span class="k-s">' + (oth ? oth + " أخرى" : "لا أغراض أخرى") + '</span><div class="ratio"><i style="width:' + pct(plan, vis.length) + '%"></i><i class="b" style="width:' + pct(insp, vis.length) + '%"></i></div></div>' +
-      '<div class="kpi"><span class="k-l">داخل / خارج دمنهور</span><span class="k-v">' + inD + "<small>/ " + (vis.length - inD) + '</small></span><span class="k-s">' + fm(inSum) + " داخل · " + fm(total - inSum) + ' خارج</span><div class="ratio"><i style="width:' + pct(inD, vis.length) + '%"></i></div></div>' +
-      '<div class="kpi"><span class="k-l">الأعلى مستحقاً</span><span class="k-v" style="font-size:24px">' + esc(top ? top.name : "—") + '</span><span class="k-s">' + (top ? fm(top.sum) + " جنيه · " + top.items.length + " زيارة · " + pct(top.sum, total) + "%" : "") + "</span></div></div>";
+    if (unkN || miss) h += '<div class="alert">' + icons.warn + "<span>" + (unkN ? unkN + " جهة بلا مدينة" : "") + (unkN && miss ? " · " : "") + (miss ? miss + " بند بلا سعر" : "") + '</span><button class="btn sm" data-goset>مراجعة</button></div>';
 
-    h += '<div class="kpis sub">' +
-      '<div class="kpi"><span class="k-l">المسافة المقطوعة</span><span class="k-v">' + fm(kmV) + '<small>كم</small></span><span class="k-s">ذهاب وعودة · ' + fm(kmV / vis.length) + " كم/زيارة</span></div>" +
-      '<div class="kpi"><span class="k-l">كم × أفراد</span><span class="k-v">' + fm(kmP) + '<small>كم</small></span><span class="k-s">' + (kmP ? (total / kmP).toFixed(2) : 0) + " جنيه/كم فرد</span></div>" +
-      '<div class="kpi"><span class="k-l">زيارات مدن بدل السفر</span><span class="k-v">' + far + "<small>/ " + vis.length + '</small></span><span class="k-s">' + farCar + " بدل سفر مستحق</span></div>" +
-      '<div class="kpi"><span class="k-l">سيارة بدون بدل</span><span class="k-v">' + nearCar + '</span><span class="k-s">' + zero + " زيارة لجهات بدون تكلفة · " + mixed + " مختلطة</span></div></div>";
+    h += '<div class="kpis">' +
+      '<div class="kpi hero"><span class="k-l">إجمالي المستحق</span><span class="k-v">' + fm(total) + "<small>جنيه</small></span><span class=\"k-s\">" + (prev ? delta(total, prev.sum) + " عن " + esc(prev.label) + " · " + fm(prev.sum) : nM > 1 ? fm(total / nM) + " / شهر" : "") + (miss ? " · +" + miss + " بلا سعر" : "") + "</span></div>" +
+      '<div class="kpi"><span class="k-l">الزيارات</span><span class="k-v">' + vis.length + '</span><span class="k-s">' + (prev ? delta(vis.length, prev.n) + " · " : "") + days.size + " يوم · " + (parts / vis.length).toFixed(1) + " فرد/زيارة</span></div>" +
+      '<div class="kpi"><span class="k-l">تكلفة الزيارة</span><span class="k-v">' + fm(Math.round(total / vis.length)) + '<small>جنيه</small></span><span class="k-s">' + fm(Math.round(total / parts)) + " لكل مشاركة</span></div>" +
+      '<div class="kpi"><span class="k-l">وفّرته سيارة الهيئة</span><span class="k-v">' + fm(Math.round(saved)) + '<small>جنيه</small></span><span class="k-s">' + pc + " مشاركة · " + pct(pc, parts) + '%</span><div class="ratio"><i style="width:' + pct(pc, parts) + '%"></i></div></div>' +
+      '<div class="kpi"><span class="k-l">خارج دمنهور</span><span class="k-v">' + pct(outSum, total) + '<small>% من المبلغ</small></span><span class="k-s">' + (vis.length - inN) + " من " + vis.length + ' زيارة</span><div class="ratio"><i style="width:' + pct(outSum, total) + '%"></i></div></div>' +
+      '<div class="kpi"><span class="k-l">الأعلى مستحقاً</span><span class="k-v nm">' + esc(top ? top.name : "—") + '</span><span class="k-s">' + (top ? fm(top.sum) + " · " + pct(top.sum, total) + "% من الإجمالي" : "") + "</span></div></div>";
 
     const maxP = Math.max(1, ...R.persons.map(p => p.sum));
-    const maxV = Math.max(1, ...R.persons.map(p => p.items.length));
-    h += '<div class="grid g2">';
-    h += '<section class="panel"><div class="panel-hd"><div><h2>المستحق لكل فرد</h2></div></div><div class="bars">' + barList(R.persons.map(p => ({ k: p.key, l: esc(p.name), parts: [p.sum], p })), "people", maxP, r => money(r.p.sum, r.p.miss)) + "</div></section>";
-    h += '<section class="panel"><div class="panel-hd"><div><h2>الزيارات لكل فرد</h2></div><div class="legend"><span><i></i>بدون سيارة</span><span><i class="b"></i>بالسيارة</span></div></div><div class="bars">' + barList([...R.persons].sort((a, b) => b.items.length - a.items.length).map(p => ({ k: p.key, l: esc(p.name), parts: [p.nocar, p.car], p })), "people", maxV, r => r.p.items.length + ' <span class="mut sm">(' + pct(r.p.car, r.p.items.length) + "% سيارة)</span>") + "</div></section></div>";
-
-    const months = {};
-    for (const x of vis) { const o = months[x.m] || (months[x.m] = { plan: 0, insp: 0, other: 0, n: 0, sum: 0 }); o[x.cat]++; o.n++; }
-    for (const it of R.items) months[it.v.m].sum += it.sum;
-    const mk = Object.keys(months).sort();
-    const mmax = Math.max(1, ...mk.map(k => months[k].n));
+    const mmax = Math.max(1, ...mk.map(k => months[k].sum));
     const msel = new Set(S.filters.months);
-    const cities = group(R.items, x => x.city || "?").slice(0, 12);
-    const cmax = Math.max(1, ...cities.map(c => c[1].n.size));
-    h += '<div class="grid g2"><section class="panel"><div class="panel-hd"><div><h2>شهرياً</h2></div><div class="legend"><span><i></i>خطة</span><span><i class="b"></i>فحص</span><span><i class="c"></i>أخرى</span></div></div><div class="cols">' +
-      mk.map(k => { const o = months[k]; return '<button class="col' + (msel.has(k) ? " on" : "") + '" data-f="months" data-k="' + k + '" title="' + UI.mlabel(k) + " · " + o.n + " زيارة · " + fm(o.sum) + ' جنيه"><b>' + o.n + '</b><span class="stk" style="height:' + (o.n / mmax * 100) + '%"><i style="flex:' + o.plan + '"></i><i class="b" style="flex:' + o.insp + '"></i><i class="c" style="flex:' + o.other + '"></i></span><small>' + MONTH_SHORT[+k.slice(5) - 1] + "<br>" + k.slice(2, 4) + "</small></button>"; }).join("") + "</div></section>";
-    h += '<section class="panel"><div class="panel-hd"><div><h2>المدن</h2></div><div class="legend"><span><i></i>بدون</span><span><i class="b"></i>بالسيارة</span></div></div><div class="bars">' + barList(cities.map(([c, o]) => ({ k: c, l: c === "?" ? '<span class="mut">غير معروفة</span>' : esc(c), parts: [o.n.size - o.car.size, o.car.size], o })), "cities", cmax, r => r.o.n.size + ' <span class="mut sm">· ' + fm(r.o.sum) + "</span>") + "</div></section></div>";
+    h += '<div class="grid g2"><section class="panel"><div class="panel-hd"><h2>المستحق لكل فرد</h2><p>' + R.persons.length + " فرد · " + fm(total / (R.persons.length || 1)) + ' متوسط</p></div><div class="bars">' +
+      barList(R.persons.map(p => ({ k: p.key, l: esc(p.name), parts: [p.sum], p })), "people", maxP, r => money(r.p.sum, r.p.miss) + ' <span class="mut sm">· ' + r.p.items.length + "</span>") + "</div></section>";
+    h += '<section class="panel"><div class="panel-hd"><h2>شهرياً</h2><p>' + (nM > 1 ? fm(total / nM) + " جنيه / شهر" : "") + '</p></div><div class="cols">' +
+      mk.map(k => { const o = months[k]; return '<button class="col' + (msel.has(k) ? " on" : "") + '" data-f="months" data-k="' + k + '" title="' + UI.mlabel(k) + " · " + o.n + " زيارة · " + fm(o.sum) + ' جنيه"><b>' + fm(Math.round(o.sum)) + '</b><span class="stk" style="height:' + Math.max(2, o.sum / mmax * 100) + '%"><i style="flex:1"></i></span><small>' + MONTH_SHORT[+k.slice(5) - 1] + "<br>" + o.n + "</small></button>"; }).join("") + "</div></section></div>";
 
-    const bandsG = group(R.items, x => x.band);
-    const bRows = ENG.BANDS.map(b => bandsG.find(x => x[0] === b)).filter(Boolean);
-    const bmax = Math.max(1, ...bRows.map(b => b[1].n.size));
-    const ck = [...new Map(vis.filter(x => x.city && x.city !== DAMANHOUR && x.km != null).map(x => [x.city, x])).values()].map(x => [x.city, x.km, vis.filter(y => y.city === x.city).length, x.far]).sort((a, b) => a[1] - b[1]);
-    const kmMax = Math.max(1, ...ck.map(c => c[1]));
-    h += '<div class="grid g2"><section class="panel"><div class="panel-hd"><div><h2>حسب المسافة</h2></div></div><div class="bars">' + barList(bRows.map(([b, o]) => ({ k: b, l: esc(ENG.bandLabel(b)), parts: [o.n.size - o.car.size, o.car.size], o })), "bands", bmax, r => r.o.n.size + ' <span class="mut sm">· ' + fm(r.o.sum) + "</span>") + "</div></section>";
-    h += '<section class="panel"><div class="panel-hd"><div><h2>المسافات</h2></div></div><div class="kmap">' + ck.map(([c, km, n, f]) => '<button class="km-row' + (S.filters.cities.includes(c) ? " on" : "") + (f ? " far" : "") + '" data-f="cities" data-k="' + esc(c) + '"><span class="nm">' + esc(c) + '</span><span class="km-tr"><i style="width:' + (km / kmMax * 100) + '%"></i></span><span class="vl">' + km + ' كم <span class="mut sm">· ' + n + "</span></span></button>").join("") + "</div></section></div>";
+    const cities = bySum(group(R.items, x => x.city || "?")).slice(0, 10);
+    const cmax = Math.max(1, ...cities.map(c => c[1].sum));
+    h += '<div class="grid g2"><section class="panel"><div class="panel-hd"><h2>بنود الصرف</h2></div><div class="kbar">' + KIND.map(([k], i) => kind[k] ? '<i style="flex:' + kind[k] + ";background:" + KC[i] + '"></i>' : "").join("") + '</div><div class="dlist">' +
+      KIND.map(([k, l], i) => '<div class="ln"><span><span class="sw" style="background:' + KC[i] + '"></span>' + l + "</span><b>" + fm(kind[k]) + ' <span class="mut sm">' + pct(kind[k], total) + "%</span></b></div>").join("") +
+      (miss ? '<div class="ln"><span>بنود بلا سعر</span><b>' + miss + "</b></div>" : "") + "</div></section>";
+    h += '<section class="panel"><div class="panel-hd"><h2>المدن حسب التكلفة</h2></div><div class="bars">' +
+      barList(cities.map(([c, o]) => ({ k: c, l: c === "?" ? '<span class="mut">غير معروفة</span>' : esc(c), parts: [o.sum], o })), "cities", cmax, r => fm(r.o.sum) + ' <span class="mut sm">· ' + r.o.n.size + " · " + fm(Math.round(r.o.sum / r.o.n.size)) + "/زيارة</span>") + "</div></section></div>";
 
-    const types = group(R.items, x => x.type);
-    const tmax = Math.max(1, ...types.map(c => c[1].n.size));
-    const ents = group(R.items, x => x.ek).slice(0, 10);
-    const emax = Math.max(1, ...ents.map(c => c[1].n.size));
+    if (nM > 1 && R.persons.length) {
+      const cm = mk.slice(-12), mat = {};
+      for (const it of R.items) { const r = mat[it.p.key] || (mat[it.p.key] = {}); r[it.v.m] = (r[it.v.m] || 0) + it.sum; }
+      const hmax = Math.max(1, ...R.persons.flatMap(p => cm.map(m => mat[p.key][m] || 0)));
+      h += '<section class="panel"><div class="panel-hd"><h2>الأفراد × الشهور</h2>' + (mk.length > 12 ? '<p>آخر 12 شهراً</p>' : "") + '</div><div class="tw"><table class="hm"><thead><tr><th></th>' + cm.map(m => '<th class="n">' + MONTH_SHORT[+m.slice(5) - 1] + " " + m.slice(2, 4) + "</th>").join("") + '<th class="n">الإجمالي</th></tr></thead><tbody>' +
+        R.persons.map(p => '<tr><td><button class="lnk-t" data-f="people" data-k="' + esc(p.key) + '">' + esc(p.name) + "</button></td>" + cm.map(m => { const x = mat[p.key][m] || 0; return '<td class="n hc"' + (x ? ' style="--o:' + (0.06 + 0.3 * x / hmax).toFixed(2) + '"' : "") + "><span>" + (x ? fm(Math.round(x)) : '<i class="mut">·</i>') + "</span></td>"; }).join("") + '<td class="n"><b>' + fm(Math.round(p.sum)) + "</b></td></tr>").join("") +
+        '<tr class="sumrow"><td>الإجمالي</td>' + cm.map(m => '<td class="n">' + fm(Math.round(months[m].sum)) + "</td>").join("") + '<td class="n">' + fm(Math.round(total)) + "</td></tr></tbody></table></div></section>";
+    }
+
+    const ents = bySum(group(R.items, x => x.ek)).slice(0, 10);
+    const emax = Math.max(1, ...ents.map(c => c[1].sum));
     const entName = k => (ENG.M.meta.ents[k] || { l: k }).l;
-    h += '<div class="grid g2"><section class="panel"><div class="panel-hd"><div><h2>نوع الجهة</h2></div></div><div class="bars">' + barList(types.map(([t, o]) => ({ k: t, l: esc(t), parts: [o.n.size - o.car.size, o.car.size], o })), "types", tmax, r => r.o.n.size + ' <span class="mut sm">· ' + fm(r.o.sum) + "</span>") + "</div></section>";
-    h += '<section class="panel"><div class="panel-hd"><div><h2>أكثر الجهات زيارة</h2></div></div><div class="bars">' + barList(ents.map(([k, o]) => ({ k, l: esc(entName(k)), parts: [o.n.size - o.car.size, o.car.size], o })), "ents", emax, r => r.o.n.size + ' <span class="mut sm">· ' + fm(r.o.sum) + "</span>") + "</div></section></div>";
-
-    const sumCat = c => R.items.reduce((s, i) => s + (i.v.cat === c ? i.sum : 0), 0);
+    const cat = { plan: [0, 0], insp: [0, 0], other: [0, 0] }, car = { nocar: [0, 0], car: [0, 0] };
+    for (const x of vis) cat[x.cat][0]++;
+    for (const it of R.items) { cat[it.v.cat][1] += it.sum; const c = car[it.p.car ? "car" : "nocar"]; c[0]++; c[1] += it.sum; }
     const purSel = new Set(S.filters.pur), carSel = new Set(S.filters.car);
-    h += '<div class="grid g3">';
-    h += '<section class="panel"><div class="panel-hd"><h2>الغرض</h2></div><div class="donut-wrap">' + UI.donut([{ v: plan, c: C1 }, { v: insp, c: C2 }, { v: oth, c: C3 }], vis.length, "زيارة") + '<div class="dlist">' + [["plan", plan, C1], ["insp", insp, C2], ["other", oth, C3]].map(([k, n, c]) => '<button data-f="pur" data-k="' + k + '" class="' + (purSel.has(k) ? "on" : "") + '"><span><span class="sw" style="background:' + c + '"></span>' + CAT[k] + '</span><span class="mut">' + n + " · " + fm(sumCat(k)) + "</span></button>").join("") + "</div></div></section>";
-    h += '<section class="panel"><div class="panel-hd"><h2>السيارة</h2></div><div class="donut-wrap">' + UI.donut([{ v: parts - pc, c: C1 }, { v: pc, c: C3 }], pct(pc, parts) + "%", "بالسيارة") + '<div class="dlist"><button data-f="car" data-k="nocar" class="' + (carSel.has("nocar") ? "on" : "") + '"><span><span class="sw" style="background:' + C1 + '"></span>بدون سيارة</span><span class="mut">' + (parts - pc) + " · " + fm(total - carMoney) + '</span></button><button data-f="car" data-k="car" class="' + (carSel.has("car") ? "on" : "") + '"><span><span class="sw" style="background:' + C3 + '"></span>بالسيارة</span><span class="mut">' + pc + " · " + fm(carMoney) + "</span></button></div></div></section>";
-    h += '<section class="panel"><div class="panel-hd"><h2>تفصيل البنود</h2></div><div class="dlist">' +
-      [["انتقال ذهاب وعودة", kind.travel], ["بدل داخلي", kind.class], ["سيرفيس دمنهور", kind.service], ["بدل سفر بالسيارة", kind.allow]].map(([l, a]) => '<div class="ln"><span>' + l + '</span><b>' + fm(a) + ' <span class="mut sm">' + pct(a, total) + "%</span></b></div>").join("") +
-      '<div class="ln"><span>متوسط المشاركة</span><b>' + fm(parts ? total / parts : 0) + '</b></div><div class="ln"><span>بنود بلا سعر</span><b>' + miss + "</b></div></div></section></div>";
+    const dl = (key, k, l, [n, s], sel, c) => '<button data-f="' + key + '" data-k="' + k + '" class="' + (sel.has(k) ? "on" : "") + '"><span><span class="sw" style="background:' + c + '"></span>' + l + '</span><span class="mut">' + n + " · " + fm(s) + "</span></button>";
+    h += '<div class="grid g2"><section class="panel"><div class="panel-hd"><h2>الجهات حسب التكلفة</h2></div><div class="bars">' +
+      barList(ents.map(([k, o]) => ({ k, l: esc(entName(k)), parts: [o.sum], o })), "ents", emax, r => fm(r.o.sum) + ' <span class="mut sm">· ' + r.o.n.size + "</span>") + "</div></section>";
+    h += '<section class="panel"><div class="panel-hd"><h2>الغرض والسيارة</h2></div><div class="stack"><div class="dlist">' + [["plan", C1], ["insp", C2], ["other", C3]].map(([k, c]) => dl("pur", k, CAT[k], cat[k], purSel, c)).join("") + '</div><div class="dlist">' + dl("car", "nocar", "بدون سيارة", car.nocar, carSel, C1) + dl("car", "car", "بالسيارة", car.car, carSel, C3) + "</div></div></section></div>";
     v.innerHTML = h;
   }
 

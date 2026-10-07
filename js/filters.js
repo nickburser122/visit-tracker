@@ -117,17 +117,20 @@ const FILTERS = (() => {
   }
 
   function periodBtn() {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "period-btn";
-    b.setAttribute("aria-haspopup", "dialog");
+    const w = document.createElement("div");
+    w.className = "period";
+    w.innerHTML = '<button type="button" class="p-step" data-s="-1" aria-label="الفترة السابقة">' + icons.chevR + '</button><button type="button" class="period-btn" aria-haspopup="dialog"></button><button type="button" class="p-step" data-s="1" aria-label="الفترة التالية">' + icons.chevL + "</button>";
+    const b = w.querySelector(".period-btn");
     b.onclick = () => PICKER.open(b, () => { lastMonth = null; changed(); });
-    b.sync = () => {
+    w.querySelectorAll(".p-step").forEach(s => s.onclick = () => { if (PICKER.step(+s.dataset.s)) { lastMonth = null; changed(); } });
+    w.sync = () => {
       const f = S.filters, on = !!(f.from || f.to || f.months.length);
+      w.classList.toggle("has", on);
       b.classList.toggle("has", on);
       b.innerHTML = icons.cal + '<span class="pl"><small>الفترة</small><b>' + esc(PICKER.label()) + "</b></span>" + '<span class="car">' + icons.chevD + "</span>";
+      w.querySelectorAll(".p-step").forEach(s => s.disabled = !PICKER.canStep(+s.dataset.s));
     };
-    return b;
+    return w;
   }
 
   function suggestions(q) {
@@ -292,6 +295,7 @@ const FILTERS = (() => {
   mq.addEventListener("change", () => { if (!root) return; S.advOpen = !mq.matches; paintAdv(); });
 
   document.addEventListener("keydown", e => {
+    if ((e.key === "[" || e.key === "]") && root && !/INPUT|TEXTAREA/.test(document.activeElement.tagName) && !document.querySelector(".modal") && !e.ctrlKey && !e.metaKey && !e.altKey) { if (PICKER.step(e.key === "]" ? 1 : -1)) { e.preventDefault(); lastMonth = null; changed(); } return; }
     if (e.key === "/" && !/INPUT|TEXTAREA/.test(document.activeElement.tagName) && !document.querySelector(".modal")) { const i = document.getElementById("omni-input"); if (i) { e.preventDefault(); i.focus(); } }
   });
 

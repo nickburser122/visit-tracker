@@ -17,13 +17,16 @@ Works out travel allowances (بدلات المرور) from the inspection-visits
   - The column mapping is remembered per header layout.
   - Fuzzy (bigram) matching links entities to cities. Linking one entity also auto-links similar unknown ones.
 - **Period picker:**
-  - Presets.
-  - Typed dates.
-  - Two-month calendar with visit-density dots.
-  - Live range preview and keyboard navigation.
-  - Month/year view.
-  - Bottom sheet on mobile.
+  - Opens in months mode: tap a month, or drag across months to pick a range. Shift+click extends the range.
+  - Days mode: tap twice or drag. Shows two months on desktop, one on mobile, with visit-density dots.
+  - Preset chips. A live footer shows the label, visit count and amount.
+  - Slide transitions, keyboard navigation, bottom sheet on mobile.
+  - ‹ › arrows beside the period button (or the `[` and `]` keys) step to the previous or next period of the same length.
 - **Month strip:** click selects one month, Ctrl or right-click adds months, Shift selects a range.
+- **Dashboard:**
+  - KPIs: total with % change against the previous equal period, visits, cost per visit and per participation, money saved by the authority car, share spent outside Damanhour, top earner.
+  - Panels: amount per person, monthly amounts, spending breakdown, cities and entities ranked by cost, a people × months heatmap, purpose and car splits.
+  - Clicking any bar applies a filter.
 - **Filters:**
   - Search with typed suggestions.
   - Collapsible advanced filters with a count badge.
@@ -48,4 +51,5 @@ localStorage: `addad2.settings` (prices, people, entities, column memory), `adda
 
 ## Not yet
 - Old `.xls` format (save as xlsx).
-- Monthly comparison report.
+- Monthly comparison in the PDF.
+- Typed date entry was removed from the picker in favour of drag selection.
