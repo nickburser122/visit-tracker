@@ -1,7 +1,5 @@
 const PICKER = (() => {
   const { esc, icons, p2, lastDay, addDays, fm } = UI;
-  const WD = ["أحد", "إثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"];
-  const WEEK_START = 6;
   const Q = ["الأول", "الثاني", "الثالث", "الرابع"];
   const ym = d => d.slice(0, 7);
   const shiftMonth = (m, n) => { let y = +m.slice(0, 4), k = +m.slice(5, 7) - 1 + n; y += Math.floor(k / 12); k = ((k % 12) + 12) % 12; return y + "-" + p2(k + 1); };
@@ -11,6 +9,10 @@ const PICKER = (() => {
   const dCount = (a, z) => Math.round((Date.parse(z) - Date.parse(a)) / 864e5) + 1;
   const fullMonths = (a, z) => !!a && a.slice(8) === "01" && z === mEnd(ym(z));
   const sort2 = (x, y) => x <= y ? [x, y] : [y, x];
+  const contiguous = ms => ms.every((m, i) => !i || shiftMonth(ms[i - 1], 1) === m);
+  const digits = s => String(s).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
+  const MKEYS = Object.keys(MONTHS_AR).map(k => [NZ(k), MONTHS_AR[k]]).sort((a, b) => b[0].length - a[0].length);
+  const monthWord = w => { const z = NZ(w); if (z.length < 3) return 0; const h = MKEYS.find(([k]) => z.startsWith(k) || k.startsWith(z)); return h ? h[1] : 0; };
 
   function describe(a, z) {
     if (!a) return "كل الفترة";
@@ -26,20 +28,29 @@ const PICKER = (() => {
     return UI.rangeLabel(a, z);
   }
 
+  function describeMonths(ms) {
+    if (!ms.length) return "كل الفترة";
+    ms = [...ms].sort();
+    if (contiguous(ms)) return describe(mStart(ms[0]), mEnd(ms[ms.length - 1]));
+    const ys = [...new Set(ms.map(m => m.slice(0, 4)))];
+    if (ys.length === 1) return ms.map(m => MONTH_SHORT[+m.slice(5) - 1]).join("، ") + " " + ys[0];
+    return ms.length + " شهور";
+  }
+
   function curRange() {
     const f = S.filters;
     if (f.from || f.to) return sort2(f.from || f.to, f.to || f.from);
     if (f.months.length) {
       const ms = [...f.months].sort();
-      if (ms.every((m, i) => !i || shiftMonth(ms[i - 1], 1) === m)) return [mStart(ms[0]), mEnd(ms[ms.length - 1])];
+      if (contiguous(ms)) return [mStart(ms[0]), mEnd(ms[ms.length - 1])];
     }
     return ["", ""];
   }
 
   function label() {
-    const [a, z] = curRange();
-    if (a) return describe(a, z);
-    return S.filters.months.length ? S.filters.months.length + " شهور" : "كل الفترة";
+    const f = S.filters;
+    if (f.from || f.to) { const [a, z] = curRange(); return describe(a, z); }
+    return describeMonths(f.months);
   }
 
   function shift(a, z, dir) {
@@ -56,6 +67,8 @@ const PICKER = (() => {
   function canStep(dir) {
     const b = bounds();
     if (!b.z) return false;
+    const f = S.filters;
+    if (f.months.length && !(f.from || f.to) && !contiguous([...f.months].sort())) return false;
     const [a, z] = curRange();
     if (!a) return dir < 0;
     const [x, y] = shift(a, z, dir);
@@ -65,209 +78,141 @@ const PICKER = (() => {
     const b = bounds();
     if (!b.z || !canStep(dir)) return false;
     const [a, z] = curRange();
-    let x, y;
-    if (!a) { x = mStart(ym(b.z)); y = mEnd(ym(b.z)); } else [x, y] = shift(a, z, dir);
     const f = S.filters;
-    f.from = x; f.to = y; f.months = [];
+    if (!a) { f.months = [ym(b.z)]; f.from = f.to = ""; return true; }
+    const [x, y] = shift(a, z, dir);
+    if (fullMonths(x, y)) { const ms = []; for (let m = ym(x); m <= ym(y); m = shiftMonth(m, 1)) ms.push(m); f.months = ms; f.from = f.to = ""; }
+    else { f.from = x; f.to = y; f.months = []; }
     return true;
+  }
+
+  function parseTyped(s, end, year) {
+    s = digits(s).trim();
+    if (!s) return { v: "" };
+    let m = s.match(/^(\d{1,2})\s*[\/\-.]\s*(\d{4})$/) || s.match(/^(\d{4})\s*[\/\-.]\s*(\d{1,2})$/);
+    if (m) {
+      const [y, mo] = m[1].length === 4 ? [+m[1], +m[2]] : [+m[2], +m[1]];
+      if (mo >= 1 && mo <= 12) { const k = y + "-" + p2(mo); return { v: end ? mEnd(k) : mStart(k), month: true }; }
+    }
+    m = s.match(/^([\u0621-\u064aA-Za-z]{3,})\s*(\d{2,4})?$/);
+    if (m) {
+      const mo = monthWord(m[1]);
+      if (mo) { const y = m[2] ? (+m[2] < 100 ? 2000 + +m[2] : +m[2]) : year; const k = y + "-" + p2(mo); return { v: end ? mEnd(k) : mStart(k), month: true }; }
+    }
+    const d = ENG.toDate(s, "dmy", year);
+    return d ? { v: d } : { err: true };
   }
 
   let cache = null;
   function stats() {
     if (cache && cache.items === ENG.M.items) return cache;
-    const ds = {}, ms = {};
+    const ds = {}, ms = {}, mn = {};
     for (const it of ENG.M.items) { ds[it.v.d] = (ds[it.v.d] || 0) + it.sum; ms[it.v.m] = (ms[it.v.m] || 0) + it.sum; }
-    return cache = { items: ENG.M.items, ds, ms };
-  }
-
-  function presets(b) {
-    const z = b.z;
-    if (!z) return [];
-    const m = ym(z), y = +m.slice(0, 4), q = Math.floor((+m.slice(5, 7) - 1) / 3), qs = y + "-" + p2(q * 3 + 1), pm = shiftMonth(m, -1);
-    const L = [
-      ["all", "", ""],
-      ["m", mStart(m), mEnd(m)],
-      ["pm", mStart(pm), mEnd(pm)],
-      ["d30", addDays(z, -29), z, "آخر 30 يوماً"],
-      ["q", mStart(qs), mEnd(shiftMonth(qs, 2))],
-      ["y", y + "-01-01", y + "-12-31"]
-    ];
-    if (b.a && +b.a.slice(0, 4) < y) L.push(["py", (y - 1) + "-01-01", (y - 1) + "-12-31"]);
-    return L.map(([id, from, to, l]) => ({ id, from, to, l: l || describe(from, to) }));
+    for (const v of ENG.M.visits) mn[v.m] = (mn[v.m] || 0) + 1;
+    return cache = { items: ENG.M.items, ds, ms, mn };
   }
 
   function open(anchor, onApply) {
     const b = bounds(), st = stats();
-    const days = ENG.M.meta.days || {}, mmeta = ENG.M.meta.months || {};
-    const maxDay = Math.max(1, ...Object.values(days));
-    const maxM = Math.max(1, ...Object.values(st.ms));
-    const two = () => innerWidth >= 760;
-    const P = presets(b);
-    let [a, z] = curRange();
-    let mode = !a || fullMonths(a, z) ? "months" : "days";
-    let pickA = "", hov = "", drag = null;
-    let year = +(a || b.z || UI.today()).slice(0, 4);
-    let view = ym(a || b.z || UI.today());
-    if (two() && (!a || ym(a) === ym(z))) view = shiftMonth(view, -1);
-    let focusK = mode === "months" ? ym(a || b.z || UI.today()) : a || b.z || UI.today();
+    const days = ENG.M.meta.days || {};
+    const f = S.filters;
+    const years = [...new Set(Object.keys(st.mn).map(m => +m.slice(0, 4)))].sort();
+    const dataYear = b.z ? +b.z.slice(0, 4) : +UI.today().slice(0, 4);
+    let mode = f.from || f.to ? "range" : "months";
+    let sel = new Set(f.from || f.to ? [] : f.months);
+    let year = sel.size ? +[...sel].sort().pop().slice(0, 4) : dataYear;
+    let from = f.from || "", to = f.to && f.to !== f.from ? f.to : "";
+    const maxM = Math.max(1, ...Object.values(st.mn));
 
-    const body = UI.open(anchor, "", { cls: "dp-pop", min: two() ? 620 : 320, title: "الفترة", align: "end" });
+    const body = UI.open(anchor, "", { cls: "dp-pop", min: 380, title: "الفترة", align: "end" });
     if (!body) return;
+    const fmtIn = d => d ? +d.slice(8) + "/" + +d.slice(5, 7) + "/" + d.slice(0, 4) : "";
+    body.innerHTML = '<div class="dp">' +
+      '<div class="seg dp-mode" role="tablist"><button type="button" data-mode="months">شهور</button><button type="button" data-mode="range">تاريخ محدد</button></div>' +
+      '<div class="dp-pane" data-pane="months"><div class="dp-yr"><button type="button" class="icon-btn sm" data-y="-1" aria-label="السنة السابقة">' + icons.chevR + '</button><b data-ytitle></b><button type="button" class="icon-btn sm" data-y="1" aria-label="السنة التالية">' + icons.chevL + '</button></div>' +
+      '<div class="dp-mgrid" role="group" aria-label="الشهور"></div><div class="dp-q"></div></div>' +
+      '<div class="dp-pane" data-pane="range"><div class="dp-in"><label class="fl"><span>من</span><input class="txt" id="dp-from" inputmode="numeric" autocomplete="off" placeholder="يوم/شهر/سنة" value="' + esc(fmtIn(from)) + '"><small data-hint="from"></small></label>' +
+      '<label class="fl"><span>إلى <i class="mut">(اختياري)</i></span><input class="txt" id="dp-to" inputmode="numeric" autocomplete="off" placeholder="نفس اليوم" value="' + esc(fmtIn(to)) + '"><small data-hint="to"></small></label></div>' +
+      '<p class="note sm">أمثلة: <b>7/4</b> · <b>7/4/2025</b> · <b>15 مارس</b> · <b>4/2025</b> لشهر كامل. السنة الافتراضية ' + dataYear + '.</p></div>' +
+      '<div class="dp-ft"><div class="dp-sum"><b></b><small></small></div><div class="row"><button type="button" class="lnk" data-clear>كل الفترة</button><button type="button" class="btn sm solid" data-done>تطبيق</button></div></div></div>';
 
-    body.innerHTML = '<div class="dp"><div class="dp-pre" role="group" aria-label="فترات جاهزة">' + P.map(p => '<button type="button" class="dp-p" data-p="' + p.id + '">' + esc(p.l) + "</button>").join("") + "</div>" +
-      '<div class="dp-bar"><div class="seg sm" role="group"><button type="button" data-mode="months">شهور</button><button type="button" data-mode="days">أيام</button></div>' +
-      '<div class="dp-nav"><button type="button" class="icon-btn sm" data-step="-1" aria-label="السابق">' + icons.chevR + '</button><button type="button" class="dp-title" data-title></button><button type="button" class="icon-btn sm" data-step="1" aria-label="التالي">' + icons.chevL + "</button></div></div>" +
-      '<div class="dp-stage"></div><div class="dp-ft"><div class="dp-sum"><b></b><small></small></div><div class="row"><button type="button" class="lnk" data-clear>مسح</button><button type="button" class="btn sm solid" data-done>تم</button></div></div></div>';
-    const stage = body.querySelector(".dp-stage");
+    const inF = body.querySelector("#dp-from"), inT = body.querySelector("#dp-to");
+    let pf = parseTyped(inF.value, false, dataYear), pt = parseTyped(inT.value, true, dataYear);
 
-    const commit = close => { const f = S.filters; f.from = a; f.to = a ? z || a : ""; f.months = []; onApply(); if (close) UI.close(); else paint(); };
-    const setMonths = (x, y) => { const [p, q] = sort2(x, y); a = mStart(p); z = mEnd(q); };
-    const range = () => pickA ? sort2(pickA, hov || pickA) : a ? [a, z || a] : ["", ""];
-
-    function monthGrid(m) {
-      const y = +m.slice(0, 4), mo = +m.slice(5, 7), n = lastDay(y, mo);
-      const first = (new Date(Date.UTC(y, mo - 1, 1)).getUTCDay() - WEEK_START + 7) % 7;
-      const td = UI.today();
-      let h = '<div class="dp-month">' + (two() ? '<div class="dp-mname">' + esc(UI.mlabel(m)) + "</div>" : "") + '<div class="dp-grid">';
-      for (let i = 0; i < 7; i++) h += '<span class="wd">' + WD[(i + WEEK_START) % 7] + "</span>";
-      h += "<span></span>".repeat(first);
-      for (let d = 1; d <= n; d++) {
-        const k = m + "-" + p2(d), c = days[k] || 0;
-        h += '<button type="button" class="dp-day' + (c ? " has" : "") + (k === td ? " today" : "") + '" data-k="' + k + '" tabindex="-1" aria-label="' + esc(UI.dlabel(k)) + (c ? " · " + c + " زيارة" : "") + '"><span>' + d + "</span>" + (c ? '<i style="--o:' + (0.35 + 0.65 * c / maxDay).toFixed(2) + '"></i>' : "") + "</button>";
-      }
-      return h + "</div></div>";
+    function draft() {
+      if (mode === "months") return { months: [...sel].sort(), from: "", to: "" };
+      if (pf.err || pt.err || !pf.v) return null;
+      let a = pf.v, z = pt.v || (pf.month ? parseTyped(inF.value, true, dataYear).v : pf.v);
+      [a, z] = sort2(a, z);
+      return { months: [], from: a, to: z };
     }
 
-    function pane(dir) {
-      let h;
-      if (mode === "months") {
-        h = '<div class="dp-mgrid">';
-        for (let i = 1; i <= 12; i++) {
-          const k = year + "-" + p2(i), n = mmeta[k] ? mmeta[k].n : 0;
-          h += '<button type="button" class="dp-mo' + (n ? " has" : "") + '" data-k="' + k + '" tabindex="-1"><b>' + MONTH_LABEL[i - 1] + "</b><small>" + (n ? n + " زيارة" : "—") + "</small>" + (n ? '<i style="--w:' + Math.max(6, Math.round((st.ms[k] || 0) / maxM * 100)) + '%"></i>' : "") + "</button>";
-        }
-        h += "</div>";
-      } else h = '<div class="dp-months' + (two() ? " two" : "") + '">' + monthGrid(view) + (two() ? monthGrid(shiftMonth(view, 1)) : "") + "</div>";
-      stage.innerHTML = '<div class="dp-pane' + (dir > 0 ? " fwd" : dir < 0 ? " back" : "") + '">' + h + "</div>";
-      body.querySelectorAll("[data-mode]").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.mode === mode)));
-      const t = body.querySelector("[data-title]");
-      t.textContent = mode === "months" ? year : two() ? describe(mStart(view), mEnd(shiftMonth(view, 1))) : UI.mlabel(view);
-      t.disabled = mode === "months";
-      paint();
-      UI.place();
+    function paintMonths() {
+      body.querySelector("[data-ytitle]").textContent = year;
+      body.querySelector('[data-y="-1"]').disabled = years.length ? year <= years[0] : false;
+      body.querySelector('[data-y="1"]').disabled = years.length ? year >= years[years.length - 1] : false;
+      let h = "";
+      for (let i = 1; i <= 12; i++) {
+        const k = year + "-" + p2(i), n = st.mn[k] || 0;
+        h += '<button type="button" class="dp-mo' + (n ? " has" : "") + (sel.has(k) ? " on" : "") + '" data-k="' + k + '" aria-pressed="' + sel.has(k) + '"><b>' + MONTH_LABEL[i - 1] + "</b><small>" + (n ? n + " زيارة" : "—") + "</small>" + (n ? '<i style="--w:' + Math.max(8, Math.round(n / maxM * 100)) + '%"></i>' : "") + "</button>";
+      }
+      body.querySelector(".dp-mgrid").innerHTML = h;
+      const ym12 = [...Array(12).keys()].map(i => year + "-" + p2(i + 1));
+      const allOn = ym12.every(k => sel.has(k));
+      body.querySelector(".dp-q").innerHTML = '<button type="button" class="dp-p' + (allOn ? " on" : "") + '" data-q="y">السنة كلها</button>' + Q.map((q, i) => { const ks = ym12.slice(i * 3, i * 3 + 3), on = ks.every(k => sel.has(k)); return '<button type="button" class="dp-p' + (on ? " on" : "") + '" data-q="' + i + '">ر' + (i + 1) + "</button>"; }).join("") + (sel.size ? '<button type="button" class="dp-p ghost" data-q="none">إلغاء التحديد</button>' : "");
+    }
+
+    function paintHints() {
+      const hf = body.querySelector('[data-hint="from"]'), ht = body.querySelector('[data-hint="to"]');
+      const hint = (el, p, inp) => { el.textContent = p.err ? "تاريخ غير مفهوم" : p.v ? (p.month ? "شهر " + UI.mlabel(ym(p.v)) : UI.dlabel(p.v) + " · " + UI.wday(p.v)) : ""; el.className = p.err ? "bad" : ""; inp.classList.toggle("bad", !!p.err); };
+      hint(hf, pf, inF); hint(ht, pt, inT);
     }
 
     function paint() {
-      const [lo, hi] = range();
-      const M = mode === "months";
-      const L = lo && M ? ym(lo) : lo, H = hi && M ? ym(hi) : hi;
-      let focused = false;
-      stage.querySelectorAll("[data-k]").forEach(el => {
-        const k = el.dataset.k, on = !!L && k >= L && k <= H;
-        el.classList.toggle("in", on);
-        el.classList.toggle("lo", on && k === L);
-        el.classList.toggle("hi", on && k === H);
-        el.setAttribute("aria-pressed", String(on));
-        el.tabIndex = k === focusK ? (focused = true, 0) : -1;
-      });
-      if (!focused) { const f = stage.querySelector("[data-k]"); if (f) f.tabIndex = 0; }
-      body.querySelectorAll("[data-p]").forEach(x => { const p = P.find(q => q.id === x.dataset.p); x.classList.toggle("on", !pickA && p.from === (a || "") && p.to === (a ? z || a : "")); });
-      let n = 0, sum = 0;
-      for (const k in days) if (!lo || (k >= lo && k <= hi)) n += days[k];
-      for (const k in st.ds) if (!lo || (k >= lo && k <= hi)) sum += st.ds[k];
+      body.querySelectorAll("[data-mode]").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.mode === mode)));
+      body.querySelectorAll("[data-pane]").forEach(x => x.hidden = x.dataset.pane !== mode);
+      if (mode === "months") paintMonths(); else paintHints();
+      const d = draft();
       const s = body.querySelector(".dp-sum");
-      s.querySelector("b").textContent = describe(lo, hi);
+      const done = body.querySelector("[data-done]");
+      done.disabled = !d;
+      if (!d) { s.querySelector("b").textContent = "أدخل تاريخاً صحيحاً"; s.querySelector("small").textContent = ""; return; }
+      let n = 0, sum = 0;
+      const inSel = d.from ? k => k >= d.from && k <= d.to : d.months.length ? (ms => k => ms.has(k.slice(0, 7)))(new Set(d.months)) : () => true;
+      for (const k in days) if (inSel(k)) n += days[k];
+      for (const k in st.ds) if (inSel(k)) sum += st.ds[k];
+      s.querySelector("b").textContent = d.from ? describe(d.from, d.to) : describeMonths(d.months);
       s.querySelector("small").textContent = n + " زيارة · " + fm(sum) + " جنيه";
+      UI.place();
     }
 
-    const cellAt = e => { const el = document.elementFromPoint(e.clientX, e.clientY); const c = el && el.closest("[data-k]"); return c && stage.contains(c) ? c : null; };
-
-    stage.addEventListener("pointerdown", e => {
-      const c = e.target.closest("[data-k]");
-      if (!c || e.button > 0) return;
-      e.preventDefault();
-      const k = c.dataset.k;
-      focusK = k;
-      if (mode === "months") {
-        const anc = e.shiftKey && a ? ym(a) : k;
-        drag = { anc, cur: k, keep: e.shiftKey };
-        setMonths(anc, k);
-      } else {
-        if (e.shiftKey && a) { [a, z] = sort2(a, k); pickA = hov = ""; commit(false); return; }
-        drag = { k0: k, cur: k, second: !!pickA, moved: false };
-        if (pickA) hov = k; else { a = z = k; }
-      }
-      try { stage.setPointerCapture(e.pointerId); } catch (_) {}
-      paint();
-    });
-    stage.addEventListener("pointermove", e => {
-      if (!drag) {
-        if (pickA && e.pointerType === "mouse") { const c = e.target.closest("[data-k]"); if (c && c.dataset.k !== hov) { hov = c.dataset.k; paint(); } }
-        return;
-      }
-      const c = cellAt(e);
-      if (!c || c.dataset.k === drag.cur) return;
-      const k = drag.cur = c.dataset.k;
-      if (mode === "months") setMonths(drag.anc, k);
-      else { drag.moved = true; if (drag.second) hov = k; else [a, z] = sort2(drag.k0, k); }
-      paint();
-    });
-    stage.addEventListener("pointerup", () => {
-      if (!drag) return;
-      const d = drag;
-      drag = null;
-      if (mode === "months") return commit(!d.keep);
-      if (d.second) { [a, z] = sort2(pickA, hov || pickA); pickA = hov = ""; commit(false); }
-      else if (d.moved) { pickA = ""; commit(false); }
-      else { pickA = d.k0; hov = ""; paint(); }
-    });
-    stage.addEventListener("pointercancel", () => { drag = null; });
+    const apply = () => { const d = draft(); if (!d) return; f.months = d.months; f.from = d.from; f.to = d.to; onApply(); UI.close(); };
 
     body.addEventListener("click", e => {
       const t = e.target.closest("button");
-      if (!t || t.disabled || t.dataset.k) return;
-      if (t.dataset.p) { const p = P.find(x => x.id === t.dataset.p); a = p.from; z = p.to; pickA = hov = ""; return commit(true); }
-      if (t.dataset.mode) {
-        if (mode === t.dataset.mode) return;
-        mode = t.dataset.mode;
-        pickA = hov = "";
-        if (mode === "days") { view = ym(a || b.z || UI.today()); if (two() && (!a || ym(a) === ym(z))) view = shiftMonth(view, -1); focusK = a || b.z || UI.today(); }
-        else { year = +(a || mStart(view)).slice(0, 4); focusK = ym(a || mStart(view)); }
-        return pane(0);
+      if (!t || t.disabled) return;
+      if (t.dataset.mode) { mode = t.dataset.mode; paint(); if (mode === "range" && !UI.mobile()) inF.focus(); return; }
+      if (t.dataset.y) { year += +t.dataset.y; return paint(); }
+      if (t.dataset.k) { const k = t.dataset.k; sel.has(k) ? sel.delete(k) : sel.add(k); return paint(); }
+      if (t.dataset.q) {
+        const ks = [...Array(12).keys()].map(i => year + "-" + p2(i + 1));
+        if (t.dataset.q === "none") { sel.clear(); return paint(); }
+        const part = t.dataset.q === "y" ? ks : ks.slice(+t.dataset.q * 3, +t.dataset.q * 3 + 3);
+        const on = part.every(k => sel.has(k));
+        part.forEach(k => on ? sel.delete(k) : sel.add(k));
+        return paint();
       }
-      if (t.dataset.step) { const s = +t.dataset.step; if (mode === "months") year += s; else view = shiftMonth(view, s); return pane(s); }
-      if (t.hasAttribute("data-title")) { mode = "months"; year = +view.slice(0, 4); pickA = hov = ""; return pane(0); }
-      if (t.hasAttribute("data-clear")) { a = z = pickA = hov = ""; return commit(true); }
-      if (t.hasAttribute("data-done")) { if (pickA) { a = z = pickA; pickA = hov = ""; commit(false); } UI.close(); }
+      if (t.hasAttribute("data-clear")) { f.months = []; f.from = f.to = ""; onApply(); UI.close(); return; }
+      if (t.hasAttribute("data-done")) apply();
     });
-
-    body.addEventListener("keydown", e => {
-      const c = e.target.closest("[data-k]");
-      if (!c) return;
-      const k = c.dataset.k, M = mode === "months";
-      const s = (M ? { ArrowLeft: 1, ArrowRight: -1, ArrowUp: -4, ArrowDown: 4 } : { ArrowLeft: 1, ArrowRight: -1, ArrowUp: -7, ArrowDown: 7 })[e.key];
-      if (s) {
-        e.preventDefault();
-        const nk = M ? shiftMonth(k, s) : addDays(k, s);
-        focusK = nk;
-        if (pickA) hov = nk;
-        if (M && +nk.slice(0, 4) !== year) { year = +nk.slice(0, 4); pane(s); }
-        else if (!M && ym(nk) < view) { view = shiftMonth(view, -1); pane(-1); }
-        else if (!M && ym(nk) > (two() ? shiftMonth(view, 1) : view)) { view = shiftMonth(view, 1); pane(1); }
-        else paint();
-        stage.querySelector('[data-k="' + nk + '"]')?.focus({ preventScroll: true });
-        return;
-      }
-      if (e.key !== "Enter" && e.key !== " ") return;
-      e.preventDefault();
-      if (M) { setMonths(e.shiftKey && a ? ym(a) : k, k); return commit(!e.shiftKey); }
-      if (pickA) { [a, z] = sort2(pickA, k); pickA = hov = ""; commit(false); }
-      else { pickA = a = z = k; paint(); }
-    });
-
-    pane(0);
-    setTimeout(() => { if (!UI.mobile()) stage.querySelector('[tabindex="0"]')?.focus({ preventScroll: true }); }, 0);
+    body.addEventListener("dblclick", e => { const t = e.target.closest("[data-k]"); if (t) { sel = new Set([t.dataset.k]); apply(); } });
+    const onIn = () => { pf = parseTyped(inF.value, false, dataYear); pt = parseTyped(inT.value, true, dataYear); paint(); };
+    inF.addEventListener("input", onIn);
+    inT.addEventListener("input", onIn);
+    [inF, inT].forEach(i => i.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); if (i === inF && !inT.value && e.shiftKey) return inT.focus(); apply(); } }));
+    paint();
+    setTimeout(() => { if (UI.mobile()) return; (mode === "range" ? inF : body.querySelector(".dp-mo.on, .dp-mo.has"))?.focus({ preventScroll: true }); }, 0);
   }
 
-  return { open, label, describe, prev, step, canStep, shiftMonth };
+  return { open, label, describe, describeMonths, prev, step, canStep, shiftMonth, contiguous };
 })();

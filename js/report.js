@@ -128,7 +128,7 @@ const REPORT = (() => {
   }
 
   function build(R, opts) {
-    const st = S.settings, period = IO.periodLabel();
+    const st = S.settings, scope = IO.scopeLabel(), period = IO.periodLabel() + (scope ? " · " + scope : "");
     const people = opts.people.length ? R.persons.filter(p => opts.people.includes(p.key)) : R.persons;
     const vs = new Set(), items = [];
     for (const p of people) for (const it of p.items) { vs.add(it.v); items.push(it); }
@@ -177,7 +177,7 @@ const REPORT = (() => {
       '<div class="rp-sec"><h4>الأفراد</h4><div id="rp-people"></div></div>' +
       '<div class="rp-sec"><h4>الترويسة</h4><label class="fl"><span>الجهة</span><input class="txt" id="rp-org" value="' + esc(st.org.name) + '"></label><label class="fl"><span>الفرع / الإدارة</span><input class="txt" id="rp-br" value="' + esc(st.org.branch) + '"></label><label class="fl"><span>عنوان الكشف</span><input class="txt" id="rp-title" value="' + esc(st.org.title) + '"></label><label class="fl"><span>التوقيعات (مفصولة بفاصلة)</span><input class="txt" id="rp-signs" value="' + esc(st.org.signs.join("، ")) + '"></label></div>' +
       '</aside><div class="rp-prev"><div class="rp-bar"><span id="rp-info" class="mut sm"></span><span class="row"><button type="button" class="icon-btn sm" data-z="-1" aria-label="تصغير">−</button><button type="button" class="icon-btn sm" data-z="1" aria-label="تكبير">+</button></span></div><div class="rp-scroll"><div id="rp-pages" class="rp-pages"></div></div></div></div>',
-      '<button class="btn" id="rp-xl">' + icons.sheet + 'Excel</button><button class="btn solid" id="rp-go">' + icons.print + "طباعة / PDF</button>", { cls: "xl", onClose: () => removeEventListener("resize", fit), sub: esc(IO.periodLabel()) + " · " + R.visits.length + " زيارة · " + R.persons.length + " فرد" });
+      '<button class="btn" id="rp-xl">' + icons.sheet + 'Excel</button><button class="btn solid" id="rp-go">' + icons.print + "طباعة / PDF</button>", { cls: "xl", onClose: () => removeEventListener("resize", fit), sub: esc(IO.periodLabel()) + (IO.scopeLabel() ? " · " + esc(IO.scopeLabel()) : "") + " · " + R.visits.length + " زيارة · " + R.items.length + " مشاركة · " + R.persons.length + " فرد" });
     const pagesEl = m.querySelector("#rp-pages");
     let zoom = UI.mobile() ? .42 : .62;
     const fit = () => { const w = m.querySelector(".rp-scroll").clientWidth - 24; const base = w / (210 * 3.78); zoom = Math.max(.3, Math.min(1, base)); pagesEl.style.setProperty("--z", zoom); };

@@ -3,7 +3,9 @@ const FILTERS = (() => {
   const PUR = [["plan", "خطة المرور"], ["insp", "فحص"], ["other", "أخرى"]];
   const CAR = [["nocar", "بدون سيارة"], ["car", "بالسيارة"]];
   const ZONE = [["out", "خارج دمنهور"], ["in", "داخل دمنهور"]];
-  const LBL = Object.fromEntries([...PUR, ...CAR, ...ZONE]);
+  const AMT = [["pos", "له مبلغ"], ["zero", "صفر"], ["miss", "بلا سعر"]];
+  const LBL = Object.fromEntries([...PUR, ...CAR, ...ZONE, ...AMT]);
+  const KIND_L = Object.fromEntries(ENG.KINDS);
   let root, ctrls = {}, lastMonth = null;
 
   const metaOpts = key => () => Object.entries(ENG.M.meta[key]).map(([v, o]) => ({ v, l: o.l, sub: o.n })).sort((a, b) => b.sub - a.sub);
@@ -12,7 +14,8 @@ const FILTERS = (() => {
     cities: metaOpts("cities"),
     types: metaOpts("types"),
     ents: metaOpts("ents"),
-    bands: () => ENG.BANDS.filter(b => ENG.M.meta.bands[b]).map(b => ({ v: b, l: ENG.bandLabel(b), sub: ENG.M.meta.bands[b].n }))
+    bands: () => ENG.BANDS.filter(b => ENG.M.meta.bands[b]).map(b => ({ v: b, l: ENG.bandLabel(b), sub: ENG.M.meta.bands[b].n })),
+    kinds: () => { const n = {}; for (const it of ENG.M.items) for (const k of new Set(it.ls.map(l => l.kind))) n[k] = (n[k] || 0) + 1; return ENG.KINDS.filter(([k]) => n[k]).map(([k, l]) => ({ v: k, l, sub: n[k] })); }
   };
 
   function changed() { saveUi(); sync(); update(); }
@@ -141,6 +144,8 @@ const FILTERS = (() => {
     const L = { people: "فرد", ents: "جهة", cities: "مدينة", types: "نوع", bands: "المسافة" };
     for (const k of Object.keys(L)) OPTS[k]().forEach(o => add(k, L[k], o.v, o.l, o.sub + " زيارة"));
     PUR.forEach(([k, l]) => add("pur", "الغرض", k, l));
+    AMT.forEach(([k, l]) => add("amt", "المبلغ", k, l));
+    ENG.KINDS.forEach(([k, l]) => add("kinds", "البند", k, l));
     ZONE.forEach(([k, l]) => add("zone", "النطاق", k, l));
     CAR.forEach(([k, l]) => add("car", "السيارة", k, l));
     Object.keys(ENG.M.meta.months).sort().reverse().forEach(k => add("months", "شهر", k, UI.mlabel(k), ENG.M.meta.months[k].n + " زيارة"));
@@ -191,7 +196,7 @@ const FILTERS = (() => {
   function popLast() {
     const f = S.filters;
     if (f.q) { f.q = ""; return changed(); }
-    for (const k of ["bands", "ents", "types", "cities", "people", "zone", "car", "pur"]) if (f[k].length) { f[k] = f[k].slice(0, -1); return changed(); }
+    for (const k of ["kinds", "amt", "bands", "ents", "types", "cities", "people", "zone", "car", "pur"]) if (f[k].length) { f[k] = f[k].slice(0, -1); return changed(); }
   }
 
   function chips() {
@@ -205,10 +210,13 @@ const FILTERS = (() => {
     f.pur.forEach(v => out.push(["pur", v, "الغرض", LBL[v]]));
     f.car.forEach(v => out.push(["car", v, "السيارة", LBL[v]]));
     f.zone.forEach(v => out.push(["zone", v, "النطاق", LBL[v]]));
+    f.amt.forEach(v => out.push(["amt", v, "المبلغ", LBL[v]]));
+    f.kinds.forEach(v => out.push(["kinds", v, "البند", KIND_L[v]]));
     if (f.q) out.push(["q", "", "نص", "«" + f.q + "»"]);
     return out;
   }
-  const advCount = () => { const f = S.filters; return ["pur", "car", "zone", "people", "cities", "types", "bands", "ents"].reduce((s, k) => s + f[k].length, 0); };
+  const ADV = ["pur", "car", "zone", "amt", "kinds", "people", "cities", "types", "bands", "ents"];
+  const advCount = () => { const f = S.filters; return ADV.reduce((s, k) => s + f[k].length, 0); };
 
   function mount(el) {
     root = el;
@@ -232,8 +240,9 @@ const FILTERS = (() => {
     ctrls.pur = segMulti("pur", PUR, "الغرض");
     ctrls.car = segMulti("car", CAR, "السيارة");
     ctrls.zone = segMulti("zone", ZONE, "النطاق");
+    ctrls.amt = segMulti("amt", AMT, "المبلغ");
     const segs = document.createElement("div"); segs.className = "f-segs";
-    [ctrls.pur, ctrls.car, ctrls.zone].forEach(s => segs.appendChild(s));
+    [ctrls.pur, ctrls.car, ctrls.zone, ctrls.amt].forEach(s => segs.appendChild(s));
     const dds = document.createElement("div"); dds.className = "f-dds";
     const mk = (label, key) => UI.multi({ label, value: S.filters[key], options: OPTS[key], onChange: v => { S.filters[key] = v; saveUi(); syncChips(); paintToggle(); update(); } });
     ctrls.people = mk("الأفراد", "people");
@@ -241,7 +250,8 @@ const FILTERS = (() => {
     ctrls.cities = mk("المدينة", "cities");
     ctrls.types = mk("نوع الجهة", "types");
     ctrls.bands = mk("المسافة", "bands");
-    [ctrls.people, ctrls.ents, ctrls.cities, ctrls.types, ctrls.bands].forEach(b => dds.appendChild(b));
+    ctrls.kinds = mk("البند", "kinds");
+    [ctrls.people, ctrls.ents, ctrls.cities, ctrls.types, ctrls.bands, ctrls.kinds].forEach(b => dds.appendChild(b));
     const inner = document.createElement("div"); inner.className = "f-adv-in";
     inner.append(segs, dds);
     adv.append(inner);
@@ -253,6 +263,7 @@ const FILTERS = (() => {
       if (!c) return;
       const k = c.dataset.k, v = c.dataset.v;
       if (k === "__all") { const snap = JSON.stringify(S.filters); resetFilters(); changed(); UI.toast("تم المسح", { action: "تراجع", onAction: () => { S.filters = JSON.parse(snap); changed(); } }); return; }
+      if (k === "__excl") { const snap = S.excl; S.excl = []; saveUi(); update(); UI.toast("أُعيدت كل البنود المستبعدة", { action: "تراجع", onAction: () => { S.excl = snap; saveUi(); update(); } }); return; }
       if (k === "q") S.filters.q = "";
       else S.filters[k] = S.filters[k].filter(x => x !== v);
       changed();
@@ -278,15 +289,16 @@ const FILTERS = (() => {
     const cs = chips();
     const any = cs.length || S.filters.months.length || S.filters.from;
     const R = currentResult();
-    ctrls.chips.innerHTML = '<span class="f-count"><b>' + R.visits.length + "</b> زيارة · <b>" + UI.fm(R.total) + "</b> جنيه</span>" + cs.map(([k, v, l, t]) => '<span class="chip"><small>' + esc(l) + "</small>" + esc(t) + '<button type="button" data-k="' + k + '" data-v="' + esc(v) + '" aria-label="إزالة ' + esc(t) + '">' + icons.x + "</button></span>").join("") + (any ? '<button type="button" class="lnk" data-k="__all">' + icons.reset + "مسح</button>" : "");
+    const ex = R.excluded.length;
+    ctrls.chips.innerHTML = '<span class="f-count"><b>' + R.visits.length + "</b> زيارة · <b>" + R.items.length + "</b> مشاركة · <b>" + UI.fm(R.total) + "</b> جنيه</span>" + cs.map(([k, v, l, t]) => '<span class="chip"><small>' + esc(l) + "</small>" + esc(t) + '<button type="button" data-k="' + k + '" data-v="' + esc(v) + '" aria-label="إزالة ' + esc(t) + '">' + icons.x + "</button></span>").join("") + (ex ? '<span class="chip warn"><small>مستبعد</small>' + ex + ' مشاركة<button type="button" data-k="__excl" aria-label="إعادة المستبعد">' + icons.x + "</button></span>" : "") + (any ? '<button type="button" class="lnk" data-k="__all">' + icons.reset + "مسح</button>" : "");
   }
 
   function sync() {
     if (!root) return;
     ctrls.period.sync();
     ctrls.strip.sync();
-    ["pur", "car", "zone"].forEach(k => ctrls[k].sync());
-    ["people", "ents", "cities", "types", "bands"].forEach(k => ctrls[k].setValue(S.filters[k]));
+    ["pur", "car", "zone", "amt"].forEach(k => ctrls[k].sync());
+    ["people", "ents", "cities", "types", "bands", "kinds"].forEach(k => ctrls[k].setValue(S.filters[k]));
     paintAdv();
     syncChips();
   }
@@ -299,5 +311,5 @@ const FILTERS = (() => {
     if (e.key === "/" && !/INPUT|TEXTAREA/.test(document.activeElement.tagName) && !document.querySelector(".modal")) { const i = document.getElementById("omni-input"); if (i) { e.preventDefault(); i.focus(); } }
   });
 
-  return { mount, sync, syncChips };
+  return { mount, sync, syncChips, LBL, KIND_L };
 })();

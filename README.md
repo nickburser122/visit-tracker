@@ -1,55 +1,53 @@
 # عدّاد · Addad
 
-Works out travel allowances (بدلات المرور) from the inspection-visits Excel file. Plain JS, no libraries, runs entirely in the browser.
+Works out travel allowances (بدلات المرور) from the inspection-visits Excel sheet. Plain JS, no libraries, runs entirely in the browser.
+
+## Input format (tailored)
+One sheet, header row `اليوم | جهة المرور | الغرض من المرور | القائم بالمرور | سيارة الهيئة`, one row per calendar day, e.g. ` Tue 01 Apr 2025 | | | | FALSE`.
+- Exact header match is detected first and imported directly, with no dialog and no guessing.
+- Empty days (no entity and no names) are skipped silently and counted as "يوم فارغ".
+- Other sheets are ignored unless they share the exact header.
+- Fuzzy detection is only a fallback for unfamiliar files, and opens the review dialog.
+- Settings sheets (المدن، الافراد، …) are still read when present.
 
 ## Features
-- **Import:** xlsx or csv, from a button, Ctrl+O, or drag-and-drop.
-  - Opens straight away when detection is confident.
-  - Otherwise shows a review dialog: per-sheet quality %, column mapping with confidence dots, a sample preview, and an issue list.
-- **Smart detection:**
-  - Finds the header row and columns by name and by content (known people and entities, dates, purpose words, yes/no values).
-  - Works with any header wording, or no header at all.
-  - Dates: serial numbers, date-formatted cells, d/m/y, m/d/y (auto-detected), 2-digit years, "15 مارس", weekday prefixes, Arabic digits. Missing years are inferred from the sheet name or neighbouring rows.
-  - Merged cells are expanded. Blank dates and entities are carried down from the row above.
-  - Total rows are skipped.
-  - Names: split on any separator; titles such as د/ and أ/ are removed; «بالسيارة» written inside a name marks that person as travelling by car.
-  - Multiple sheets can be merged and de-duplicated, and imports can replace or append to existing data.
-  - The column mapping is remembered per header layout.
-  - Fuzzy (bigram) matching links entities to cities. Linking one entity also auto-links similar unknown ones.
-- **Period picker:**
-  - Opens in months mode: tap a month, or drag across months to pick a range. Shift+click extends the range.
-  - Days mode: tap twice or drag. Shows two months on desktop, one on mobile, with visit-density dots.
-  - Preset chips. A live footer shows the label, visit count and amount.
-  - Slide transitions, keyboard navigation, bottom sheet on mobile.
-  - ‹ › arrows beside the period button (or the `[` and `]` keys) step to the previous or next period of the same length.
-- **Month strip:** click selects one month, Ctrl or right-click adds months, Shift selects a range.
-- **Dashboard:**
-  - KPIs: total with % change against the previous equal period, visits, cost per visit and per participation, money saved by the authority car, share spent outside Damanhour, top earner.
-  - Panels: amount per person, monthly amounts, spending breakdown, cities and entities ranked by cost, a people × months heatmap, purpose and car splits.
-  - Clicking any bar applies a filter.
-- **Filters:**
-  - Search with typed suggestions.
-  - Collapsible advanced filters with a count badge.
-  - Removable chips, with undo.
-- **PDF:**
-  - Live A4 preview.
-  - Paginated summary and per-person statements, with carry-forward subtotals.
-  - Reference number, page x/y, amount in words, signatures.
-  - Optional Arabic digits.
-- **Excel:** report export, backup, and template.
-- **UX:**
-  - Undo toasts.
-  - Bottom sheets on mobile.
-  - Visits shown as cards on mobile, with infinite scroll.
-  - Alt+1–4 or the arrow keys switch tabs, Ctrl+P opens the PDF dialog, / focuses search.
+- **Period picker:** two modes.
+  - **شهور:** a year grid. Tap any months, including non-adjacent ones. Year and quarter shortcuts. Double-click applies a single month.
+  - **تاريخ محدد:** typed `من` / `إلى` fields with a live parse hint. Accepts `7/4`, `7/4/2025`, `15 مارس`, and `4/2025` (whole month). The year defaults to the data year. Enter applies.
+  - ‹ › arrows step to the previous or next period of the same length.
+- **People tab · عرض (lenses):** one-tap views with live counts:
+  - كل البنود
+  - بالسيارة
+  - بالسيارة بلا مبلغ
+  - بالسيارة بمبلغ
+  - بدون سيارة
+  - صفر فقط
+  - بلا سعر
+  - بدل سفر
+  - سيرفيس
+  - خارج دمنهور بدون سيارة
+- **New filters:** المبلغ (له مبلغ / صفر / بلا سعر) and البند (line kind), also in the filter bar, search and chips.
+- **Exclusions:** "استبعاد بنود" mode lets you untick individual participations. Excluded items:
+  - leave totals, statements, PDF and Excel;
+  - show struck-through only in edit mode;
+  - can be undone from a chip.
+- **WYSIWYG output:** PDF and Excel use exactly the on-screen result. The PDF subtitle states the scope (e.g. "بالسيارة · بلا مبلغ").
+- People summary is sortable by any column and has a "بلا مبلغ" column. Visits show amounts for the filtered people only; other people on a visit are dimmed.
+- Dashboard, visits table, settings, and import review are unchanged in function.
 
-## Files
-`index.html` · `css/style.css` · `js/data.js` · `js/xlsx.js` · `js/ui.js` · `js/engine.js` · `js/picker.js` · `js/filters.js` · `js/io.js` · `js/report.js` · `js/views.js` · `js/app.js` · `images/logo.jpg`, `images/icon.jpg`
+## Fixes
+- Dropdowns opened inside modals (import column mapping, PDF people picker) appeared behind the modal; the z-index is fixed.
+- Weekday stripping no longer eats letters inside Arabic words.
+- Saved UI state is validated, so corrupt localStorage can't break filters.
+- Changing a person's grade refreshes the filter bar and chips as well.
+- The template now mirrors the real one-row-per-day sheet.
 
 ## Storage
-localStorage: `addad2.settings` (prices, people, entities, column memory), `addad2.data` (rows), `addad3.ui`, `addad2.theme`. No server.
+localStorage only: `addad2.settings`, `addad2.data`, `addad3.ui` (filters, excluded items), `addad2.theme`.
+
+## Files
+`index.html` · `css/style.css` · `js/{data,xlsx,ui,engine,picker,filters,io,report,views,app}.js` · `images/`
 
 ## Not yet
 - Old `.xls` format (save as xlsx).
-- Monthly comparison in the PDF.
-- Typed date entry was removed from the picker in favour of drag selection.
+- Per-line (rather than per-participation) exclusion.

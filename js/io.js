@@ -24,9 +24,17 @@ const IO = (() => {
 
   function template(withData) {
     const head = ["اليوم", "جهة المرور", "الغرض من المرور", "القائم بالمرور", "سيارة الهيئة"];
-    const rows = withData && S.raw.length
-      ? S.raw.map(r => [r.d, r.ent, r.g, r.people.join(" - "), !!r.car])
-      : [["2026-04-07", "ابو المطامير", "خطة المرور", "هنداوي - اديب", true], ["2026-04-09", "المخازن الغير طبية", "خطة المرور", "اماني - اباظة", false], ["2026-04-10", "مستشفي ايتاي", "فحص", "مريم", false]];
+    const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], MO = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const dayCell = d => { const x = new Date(d + "T00:00:00Z"); return WD[x.getUTCDay()] + " " + UI.p2(x.getUTCDate()) + " " + MO[x.getUTCMonth()] + " " + x.getUTCFullYear(); };
+    let rows;
+    if (withData && S.raw.length) rows = S.raw.map(r => [dayCell(r.d), r.ent, r.g, r.people.join(" - "), !!r.car]);
+    else {
+      const m = UI.today().slice(0, 7), n = UI.lastDay(+m.slice(0, 4), +m.slice(5, 7));
+      rows = [];
+      for (let d = 1; d <= n; d++) rows.push([dayCell(m + "-" + UI.p2(d)), "", "", "", false]);
+      rows[6] = [rows[6][0], "ابو المطامير", "خطة المرور", "هنداوي - ميسرة - اديب - حمودين", true];
+      rows[8] = [rows[8][0], "مستشفي ايتاي", "فحص", "اماني - اباظة", false];
+    }
     const sheets = [{ name: "الاصلي", cols: [14, 30, 20, 40, 12], rows: [head, ...rows] }, ...settingsSheets()];
     UI.download((withData ? "addad-data_" : "addad-template_") + stamp() + ".xlsx", XL.write(sheets));
     UI.toast("✓ تم التنزيل");
@@ -67,17 +75,22 @@ const IO = (() => {
       UI.toast(e.message === "xls" ? "صيغة xls القديمة غير مدعومة — احفظ الملف بصيغة xlsx" : "تعذّر قراءة الملف — تأكد أنه xlsx أو csv", { error: true });
       return;
     }
-    const res = ENG.analyze(data.sheets);
+    const all = ENG.analyze(data.sheets);
     const sets = data.isCsv ? [] : readSettings(data.sheets);
-    const good = res.filter(r => r.ok);
-    if (!res.length && !sets.length) return UI.toast("لم أجد جدول زيارات أو إعدادات في الملف", { error: true });
-    const highConf = good.length === 1 && !sets.length && (good[0].remembered || ["d", "e", "p"].every(k => (good[0].conf[k] || 0) >= .6)) && good[0].quality > .85;
-    if (highConf && !S.raw.length) return commit([good[0]], f.name, [], "replace");
+    const good = all.filter(r => r.ok);
+    if (!good.length && !sets.length) {
+      if (all.length) return review(f.name, all.slice(0, 1), sets);
+      return UI.toast("لم أجد جدول زيارات أو إعدادات في الملف", { error: true });
+    }
+    const best = good[0];
+    const res = best ? [best, ...good.slice(1).filter(r => r.exact)] : [];
+    const sure = best && !sets.length && res.length === 1 && (best.exact || best.remembered || ["d", "e", "p"].every(k => (best.conf[k] || 0) >= .6)) && best.quality > .85;
+    if (sure) return commit([best], f.name, [], "replace");
     review(f.name, res, sets);
   }
 
   function review(file, res, sets) {
-    const state = res.map((r, i) => ({ r, on: r.ok && (i === 0 || (r.quality > .8 && r.rows.length > 5)), open: !r.ok || (i === 0 && ENG.HEAD_KEYS.some(k => (k === "d" || k === "e" || k === "p") && (r.conf[k] || 0) < .6)) }));
+    const state = res.map((r, i) => ({ r, on: r.ok && i === 0, open: !r.ok || (i === 0 && (r.quality < .85 || ["d", "e", "p"].some(k => (r.conf[k] || 0) < .6))) }));
     let mode = "replace";
     const m = UI.modal("استيراد «" + file + "»", '<div id="imp-body"></div>', '<button class="btn" data-x>إلغاء</button><button class="btn solid" id="imp-go">استيراد</button>', { cls: "wide" });
     const host = m.querySelector("#imp-body");
@@ -91,6 +104,7 @@ const IO = (() => {
       if (st) {
         if (st.noDate) issues.push(st.noDate + " بلا تاريخ");
         if (st.noPeople) issues.push(st.noPeople + " بلا أسماء");
+        if (st.empty) issues.push(st.empty + " يوم فارغ مُتجاهَل");
         if (st.totals) issues.push(st.totals + " إجمالي مُتجاهَل");
         if (st.filled) issues.push(st.filled + " تاريخ مُكمَل");
         if (st.yearGuess) issues.push(st.yearGuess + " سنة مُستنتجة");
@@ -161,12 +175,14 @@ const IO = (() => {
     S.raw = merged.rows;
     S.file = mode === "append" && snap.file ? snap.file + " + " + file : file;
     S.sheet = picked.map(r => r.name).join("، ");
-    resetFilters(); S.sel = []; S.vlimit = 200;
+    const snapExcl = S.excl;
+    resetFilters(); S.sel = []; S.vlimit = 200; S.excl = [];
     rebuild(); saveData(); saveUi();
     if (S.tab === "prices") S.tab = "dash";
     render();
-    const unk = Object.keys(ENG.M.meta.unknown).length;
-    UI.toast("✓ " + ENG.M.visits.length + " زيارة" + (merged.dup ? " · " + merged.dup + " مكرر" : "") + (unk ? " · " + unk + " للمراجعة" : ""), { action: "تراجع", onAction: () => { S.raw = snap.raw; S.file = snap.file; S.sheet = snap.sheet; S.settings = JSON.parse(snap.settings); S.filters = JSON.parse(snap.filters); saveSettings(); saveData(); saveUi(); rebuild(); render(); } });
+    const unk = Object.values(ENG.M.meta.unknown).filter(o => !o.city).length;
+    const st0 = picked[0].stat;
+    UI.toast("✓ " + ENG.M.visits.length + " زيارة" + (st0 && st0.days ? " في " + st0.active + " من " + st0.days + " يوم" : "") + (merged.dup ? " · " + merged.dup + " مكرر" : "") + (unk ? " · " + unk + " جهة بلا مدينة" : ""), { action: "تراجع", onAction: () => { S.raw = snap.raw; S.file = snap.file; S.sheet = snap.sheet; S.excl = snapExcl; S.settings = JSON.parse(snap.settings); S.filters = JSON.parse(snap.filters); saveSettings(); saveData(); saveUi(); rebuild(); render(); } });
   }
 
   function demo() {
@@ -195,7 +211,10 @@ const IO = (() => {
     const tot = ["الإجمالي", "", sum.reduce((s, r) => s + r[2], 0), sum.reduce((s, r) => s + r[3], 0), ...[4, 5, 6, 7, 8, 9].map(i => sum.reduce((s, r) => s + r[i], 0))];
     const lines = [["الاسم", "التاريخ", "اليوم", "جهة المرور", "نوع الجهة", "المدينة", "المسافة", "الغرض", "سيارة الهيئة", "البيان", "التفصيل", "المبلغ"]];
     for (const p of R.persons) for (const it of [...p.items].sort((a, b) => a.v.d < b.v.d ? -1 : 1)) for (const l of it.ls) lines.push([p.name, it.v.d, UI.wday(it.v.d), it.v.ent, it.v.type, it.v.city || "", it.v.km, it.v.g, it.p.car, l.t, l.note || "", l.a]);
-    const vis = [["التاريخ", "جهة المرور", "المدينة", "الغرض", "الأفراد", "بالسيارة", "المستحق"], ...R.visits.map(v => [v.d, v.ent, v.city || "", v.g, v.people.map(p => p.name).join(" - "), v.people.filter(p => p.car).map(p => p.name).join(" - "), v.sum])];
+    const vsum = new Map();
+    for (const p of R.persons) for (const it of p.items) { const o = vsum.get(it.v) || { sum: 0, ps: [] }; o.sum += it.sum; o.ps.push(it.p); vsum.set(it.v, o); }
+    const vlist = [...vsum.keys()].sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : 0);
+    const vis = [["التاريخ", "جهة المرور", "المدينة", "الغرض", "الأفراد", "بالسيارة", "المستحق"], ...vlist.map(v => { const o = vsum.get(v); return [v.d, v.ent, v.city || "", v.g, o.ps.map(p => p.name).join(" - "), o.ps.filter(p => p.car).map(p => p.name).join(" - "), o.sum]; })];
     UI.download("addad-report_" + periodName() + ".xlsx", XL.write([
       { name: "ملخص", cols: [18, 10, 10, 10, 12, 12, 12, 12, 14, 12], rows: [head, ...sum, tot], total: true },
       { name: "البنود", cols: [16, 12, 10, 30, 14, 14, 10, 16, 10, 46, 30, 10], rows: lines },
@@ -229,5 +248,17 @@ const IO = (() => {
     return b.a ? "من " + UI.dlabel(b.a) + " إلى " + UI.dlabel(b.z) : "";
   }
 
-  return { template, readSettings, load, demo, exportExcel, periodLabel, periodName, settingsSheets };
+  function scopeLabel() {
+    const f = S.filters, meta = ENG.M.meta, L = FILTERS.LBL, K = FILTERS.KIND_L;
+    const nm = (k, v) => (meta[k][v] || { l: v }).l;
+    const parts = [];
+    const add = (arr, fn) => { if (arr.length) parts.push(arr.map(fn).join(" أو ")); };
+    add(f.car, v => L[v]); add(f.amt, v => L[v] === "صفر" ? "بلا مبلغ" : L[v]); add(f.kinds, v => K[v]); add(f.zone, v => L[v]); add(f.pur, v => L[v]);
+    add(f.cities, v => nm("cities", v)); add(f.ents, v => nm("ents", v)); add(f.types, v => v); add(f.bands, v => ENG.bandLabel(v));
+    if (f.q) parts.push("«" + f.q + "»");
+    if (S.excl.length) { const n = currentResult().excluded.length; if (n) parts.push("مستبعد " + n + " بند"); }
+    return parts.join(" · ");
+  }
+
+  return { template, readSettings, load, demo, exportExcel, periodLabel, periodName, settingsSheets, scopeLabel };
 })();

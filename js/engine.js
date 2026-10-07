@@ -4,7 +4,7 @@ const ENG = (() => {
   const okYMD = (y, m, d) => y > 1900 && y < 2200 && m >= 1 && m <= 12 && d >= 1 && d <= new Date(Date.UTC(y, m, 0)).getUTCDate();
   const iso = (y, m, d) => okYMD(y, m, d) ? y + "-" + p2(m) + "-" + p2(d) : "";
   const fixYear = y => y < 100 ? 2000 + y : y;
-  const DAY_WORDS = /(?:يوم\s+)?(?:ال)?(?:سبت|[اأإ]حد|[اأإ]ثنين|[اأإ]ثنا|ثلاثاء?|[اأإ]ربعاء?|خميس|جمع[ةه])\s*[,،]?|\b(?:sat|sun|mon|tue|wed|thu|fri)[a-z]*\.?\s*[,،]?/gi;
+  const DAY_WORDS = /(?<![\u0621-\u064a])(?:يوم\s+)?(?:ال)?(?:سبت|[اأإ]حد|[اأإ]ثنين|[اأإ]ثنا|ثلاثاء?|[اأإ]ربعاء?|خميس|جمع[ةه])(?![\u0621-\u064a])\s*[,،]?|\b(?:sat|sun|mon|tue|wed|thu|fri)[a-z]*\.?\s*[,،]?/gi;
   const MONTH_KEYS = Object.keys(MONTHS_AR).map(k => [NZ(k), MONTHS_AR[k]]).sort((a, b) => b[0].length - a[0].length);
   const monthWord = w => { const z = NZ(w); const hit = MONTH_KEYS.find(([k]) => z.startsWith(k) || (z.length >= 3 && k.startsWith(z))); return hit ? hit[1] : 0; };
 
@@ -52,7 +52,25 @@ const ENG = (() => {
     p: ["القائم بالمرور", "القائمين بالمرور", "القائم", "القائمين", "الافراد", "الاسماء", "اسماء", "المرافقين", "المفتشين", "فريق المرور", "اللجنه", "الفريق", "staff", "people", "team", "names", "inspectors"],
     c: ["سياره الهيئه", "سياره", "السياره", "عربيه", "وسيله الانتقال", "car", "vehicle"]
   };
+  for (const k in HEAD) HEAD[k] = HEAD[k].map(NZ);
   const REQ = ["d", "e", "p"];
+  const EXACT = {
+    d: ["اليوم", "التاريخ", "تاريخ المرور"],
+    e: ["جهة المرور", "الجهة"],
+    g: ["الغرض من المرور", "الغرض"],
+    p: ["القائم بالمرور", "القائمين بالمرور", "القائمون بالمرور"],
+    c: ["سيارة الهيئة", "السيارة"]
+  };
+  for (const k in EXACT) EXACT[k] = EXACT[k].map(NZ);
+
+  function exactHeader(rows) {
+    for (let i = 0; i < Math.min(rows.length, 15); i++) {
+      const r = rows[i] || [], cols = {};
+      r.forEach((c, j) => { const z = NZ(c); if (!z) return; for (const k in EXACT) if (cols[k] == null && EXACT[k].includes(z)) { cols[k] = j; break; } });
+      if (REQ.every(k => cols[k] != null)) return { hdr: i, cols };
+    }
+    return null;
+  }
 
   function headerHit(cell, words) {
     const c = NZ(cell);
@@ -182,27 +200,32 @@ const ENG = (() => {
 
   function extract(rows, hdr, cols, order, sheetName) {
     const out = [];
-    const stat = { rows: 0, used: 0, noDate: 0, noEnt: 0, noPeople: 0, totals: 0, filled: 0, yearGuess: 0, carMarks: 0 };
+    const stat = { rows: 0, used: 0, noDate: 0, noEnt: 0, noPeople: 0, totals: 0, filled: 0, yearGuess: 0, carMarks: 0, empty: 0, days: 0 };
+    const days = new Set();
     let lastDate = "", lastEnt = "", lastYear = yearHint(sheetName);
     if (!lastYear) for (let i = hdr + 1; i < Math.min(rows.length, hdr + 400); i++) { const p = dateParts((rows[i] || [])[cols.d], order); if (p && p.y) { lastYear = p.y; break; } }
     const headE = hdr >= 0 ? NZ((rows[hdr] || [])[cols.e]) : "";
+    const txt = v => String(v == null ? "" : v).replace(/\s+/g, " ").trim();
     for (let i = hdr + 1; i < rows.length; i++) {
       const r = rows[i] || [];
       if (!r.some(x => x != null && x !== "")) continue;
-      stat.rows++;
       const rowText = NZ(r.slice(0, 4).join(" "));
       if (TOTAL_RX.test(NZ(r[cols.d])) || TOTAL_RX.test(NZ(r[cols.e])) || (TOTAL_RX.test(rowText) && !NZ(r[cols.p]))) { stat.totals++; continue; }
       const dp = dateParts(r[cols.d], order);
-      let d = "";
-      if (dp) { if (!dp.y) { stat.yearGuess++; dp.y = lastYear || new Date().getFullYear(); } d = iso(dp.y, dp.m, dp.d); if (d) lastYear = dp.y; }
-      let ent = String(r[cols.e] == null ? "" : r[cols.e]).replace(/\s+/g, " ").trim();
+      let d = "", guessed = false;
+      if (dp) { if (!dp.y) { guessed = true; dp.y = lastYear || new Date().getFullYear(); } d = iso(dp.y, dp.m, dp.d); if (d) lastYear = dp.y; }
+      let ent = txt(r[cols.e]);
       const sp = splitPeople(r[cols.p]);
+      if (!ent && !sp.names.length) { if (d) { stat.empty++; days.add(d); lastDate = d; } continue; }
+      if (headE && NZ(ent) === headE) continue;
+      stat.rows++;
+      if (guessed) stat.yearGuess++;
       if (!ent && lastEnt && sp.names.length && !d) ent = lastEnt;
       if (!d && ent && sp.names.length && lastDate) { d = lastDate; stat.filled++; }
       if (!d) { stat.noDate++; continue; }
       if (!ent) { stat.noEnt++; continue; }
       if (!sp.names.length) { stat.noPeople++; continue; }
-      if (headE && NZ(ent) === headE) continue;
+      days.add(d);
       lastDate = d; lastEnt = ent;
       const car = cols.c != null ? truthy(r[cols.c]) : false;
       if (sp.car.length) stat.carMarks += sp.car.length;
@@ -211,6 +234,8 @@ const ENG = (() => {
       out.push(row);
     }
     stat.used = out.length;
+    stat.days = days.size;
+    stat.active = new Set(out.map(r => r.d)).size;
     return { rows: out, stat };
   }
 
@@ -230,14 +255,23 @@ const ENG = (() => {
   function analyzeSheet(sheet) {
     const rows = sheet.rows || [];
     if (SETTING_SHEETS.includes(NZ(sheet.name)) || !rows.length) return { ok: false };
-    const h = headerRow(rows);
+    const exact = exactHeader(rows);
+    const h = exact ? { hdr: exact.hdr, score: 10 } : headerRow(rows);
     const map = mapColumns(rows, h.hdr);
-    const mem = (S.settings.colMemory || {})[fingerprint(rows, h.hdr)];
     let remembered = false;
-    if (mem) { map.cols = { ...mem.cols }; map.order = mem.order || map.order; for (const k in map.cols) map.conf[k] = 1; remembered = true; }
+    if (exact) {
+      map.cols = { ...exact.cols };
+      map.conf = {};
+      for (const k in map.cols) map.conf[k] = 1;
+      const pd = map.prof[exact.cols.d];
+      map.order = pd ? pd.order : "dmy";
+    } else {
+      const mem = (S.settings.colMemory || {})[fingerprint(rows, h.hdr)];
+      if (mem) { map.cols = { ...mem.cols }; map.order = mem.order || map.order; for (const k in map.cols) map.conf[k] = 1; remembered = true; }
+    }
     const cols = map.cols;
     const missing = REQ.filter(k => cols[k] == null);
-    const res = { name: sheet.name, sheet, hdr: h.hdr, cols, conf: map.conf, order: map.order, missing, rows: [], stat: null, ok: false, remembered };
+    const res = { name: sheet.name, sheet, hdr: h.hdr, cols, conf: map.conf, order: map.order, missing, rows: [], stat: null, ok: false, remembered, exact: !!exact };
     if (missing.length) return res;
     const ex = extract(rows, h.hdr, cols, map.order, sheet.name);
     res.rows = ex.rows; res.stat = ex.stat;
@@ -246,13 +280,13 @@ const ENG = (() => {
     const quality = ex.stat.rows ? ex.rows.length / ex.stat.rows : 0;
     res.quality = quality;
     res.months = [...new Set(ex.rows.map(r => r.d.slice(0, 7)))].sort();
-    res.score = pref + h.score * 10 + quality * 50 + Math.min(ex.rows.length, 999) / 1000;
+    res.score = (exact ? 2000 : 0) + pref + h.score * 10 + quality * 50 + Math.min(ex.rows.length, 999) / 1000;
     return res;
   }
 
   function remap(res, cols, order) {
     const ex = extract(res.sheet.rows, res.hdr, cols, order || res.order, res.name);
-    return { ...res, cols, order: order || res.order, rows: ex.rows, stat: ex.stat, ok: ex.rows.length > 0, missing: REQ.filter(k => cols[k] == null), months: [...new Set(ex.rows.map(r => r.d.slice(0, 7)))].sort() };
+    return { ...res, cols, order: order || res.order, rows: ex.rows, stat: ex.stat, ok: ex.rows.length > 0, quality: ex.stat.rows ? ex.rows.length / ex.stat.rows : 0, missing: REQ.filter(k => cols[k] == null), months: [...new Set(ex.rows.map(r => r.d.slice(0, 7)))].sort() };
   }
 
   const analyze = sheets => sheets.map(analyzeSheet).filter(a => a.name).sort((a, b) => (b.ok - a.ok) || ((b.score || 0) - (a.score || 0)));
@@ -463,7 +497,7 @@ const ENG = (() => {
         let sum = 0, miss = 0;
         const k = { travel: 0, class: 0, service: 0, allow: 0 };
         for (const l of ls) { if (l.a == null) miss++; else { sum += l.a; if (l.kind in k) k[l.kind] += l.a; } }
-        items.push({ v, p, ls, sum, miss, k });
+        items.push({ id: v.id + "|" + p.key, v, p, ls, sum, miss, k });
         v.sum += sum; v.miss += miss;
         inc(meta.people, p.key, p.name);
       }
@@ -485,6 +519,9 @@ const ENG = (() => {
     return null;
   }
 
+  const KINDS = [["travel", "انتقال"], ["class", "بدل داخلي"], ["service", "سيرفيس"], ["allow", "بدل سفر"], ["zero", "جهة بدون تكلفة"], ["car", "سيارة بلا بدل"]];
+  const amtOf = it => it.miss ? "miss" : it.sum > 0 ? "pos" : "zero";
+
   function filter(f, opt = {}) {
     const tests = [];
     const pt = opt.skipPeriod ? null : periodTest(f);
@@ -501,25 +538,33 @@ const ENG = (() => {
     if (q) tests.push(v => v.s.includes(q));
     const people = set(f.people);
     const car = f.car && f.car.length === 1 ? f.car[0] : null;
-    const items = [];
-    const vset = new Set();
+    const amt = set(f.amt), kinds = set(f.kinds);
+    const excl = !opt.keepExcl && S.excl && S.excl.length ? new Set(S.excl) : null;
+    const items = [], excluded = [];
+    const vm = new Map();
     for (const it of M.items) {
       if (people && !people.has(it.p.key)) continue;
       if (car && (car === "car") !== it.p.car) continue;
+      if (amt && !amt.has(amtOf(it))) continue;
+      if (kinds && !it.ls.some(l => kinds.has(l.kind))) continue;
       const v = it.v;
       let ok = true;
       for (const t of tests) if (!t(v)) { ok = false; break; }
       if (!ok) continue;
+      if (excl && excl.has(it.id)) { excluded.push(it); continue; }
       items.push(it);
-      vset.add(v);
+      let o = vm.get(v);
+      if (!o) vm.set(v, o = { sum: 0, miss: 0, keys: new Set() });
+      o.sum += it.sum; o.miss += it.miss; o.keys.add(it.p.key);
     }
-    const visits = [...vset];
+    const visits = [...vm.keys()];
     const pm = new Map();
     for (const it of items) {
       let o = pm.get(it.p.key);
-      if (!o) pm.set(it.p.key, o = { key: it.p.key, name: it.p.name, cls: it.p.cls, items: [], sum: 0, miss: 0, car: 0, nocar: 0, plan: 0, insp: 0, other: 0, km: 0, far: 0, k: { travel: 0, class: 0, service: 0, allow: 0 } });
+      if (!o) pm.set(it.p.key, o = { key: it.p.key, name: it.p.name, cls: it.p.cls, items: [], sum: 0, miss: 0, car: 0, nocar: 0, zero: 0, plan: 0, insp: 0, other: 0, km: 0, far: 0, k: { travel: 0, class: 0, service: 0, allow: 0 } });
       o.items.push(it);
       o.sum += it.sum; o.miss += it.miss;
+      if (!it.miss && it.sum === 0) o.zero++;
       o[it.p.car ? "car" : "nocar"]++;
       o[it.v.cat]++;
       o.km += (it.v.km || 0) * 2;
@@ -529,7 +574,7 @@ const ENG = (() => {
     const persons = [...pm.values()].sort((a, b) => b.sum - a.sum || b.items.length - a.items.length);
     let total = 0, miss = 0;
     for (const it of items) { total += it.sum; miss += it.miss; }
-    return { visits, items, persons, total, miss };
+    return { visits, items, persons, total, miss, vm, excluded };
   }
 
   function nocarCost(v, p) {
@@ -538,5 +583,5 @@ const ENG = (() => {
     return s;
   }
 
-  return { M, nocarCost, analyze, remap, rememberCols, headersOf, mergeRows, build, filter, registerPeople, purposeCat, personKey, toDate, dateParts, splitPeople, BANDS, bandLabel, kmOf, isFar, zeroHit, resolve: e => (resolver || (resolver = makeResolver()))(e), SETTING_SHEETS, HEAD_KEYS: ["d", "e", "g", "p", "c"] };
+  return { M, KINDS, amtOf, nocarCost, analyze, remap, rememberCols, headersOf, mergeRows, build, filter, registerPeople, purposeCat, personKey, toDate, dateParts, splitPeople, BANDS, bandLabel, kmOf, isFar, zeroHit, resolve: e => (resolver || (resolver = makeResolver()))(e), SETTING_SHEETS, HEAD_KEYS: ["d", "e", "g", "p", "c"] };
 })();

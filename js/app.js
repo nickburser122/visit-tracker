@@ -1,9 +1,9 @@
 const KEY = { settings: "addad2.settings", data: "addad2.data", ui: "addad3.ui", theme: "addad2.theme" };
-const BLANK_FILTERS = () => ({ months: [], from: "", to: "", pur: [], car: [], zone: [], people: [], cities: [], types: [], ents: [], bands: [], q: "" });
+const BLANK_FILTERS = () => ({ months: [], from: "", to: "", pur: [], car: [], zone: [], people: [], cities: [], types: [], ents: [], bands: [], amt: [], kinds: [], q: "" });
 
 const S = {
   settings: null, raw: [], file: "", sheet: "", sheets: [],
-  tab: "dash", sel: [], pview: "statement", theme: "system", vlimit: 200, vsort: "d-desc", advOpen: null,
+  tab: "dash", sel: [], pview: "statement", theme: "system", vlimit: 200, vsort: "d-desc", advOpen: null, excl: [], editMode: false,
   filters: BLANK_FILTERS()
 };
 
@@ -37,7 +37,17 @@ function loadStore() {
   } catch (e) {}
   try {
     const u = JSON.parse(localStorage.getItem(KEY.ui) || "null");
-    if (u) { S.tab = u.tab || "dash"; S.sel = u.sel || []; S.pview = u.pview || "statement"; S.vsort = u.vsort || "d-desc"; S.advOpen = u.advOpen ?? null; S.filters = { ...BLANK_FILTERS(), ...(u.filters || {}) }; }
+    if (u) {
+      S.tab = ["dash", "visits", "people", "prices"].includes(u.tab) ? u.tab : "dash";
+      S.sel = Array.isArray(u.sel) ? u.sel : [];
+      S.pview = u.pview === "ledger" ? "ledger" : "statement";
+      S.vsort = u.vsort || "d-desc";
+      S.advOpen = u.advOpen ?? null;
+      S.excl = Array.isArray(u.excl) ? u.excl : [];
+      const f = { ...BLANK_FILTERS(), ...(u.filters || {}) };
+      for (const k of Object.keys(BLANK_FILTERS())) if (k !== "q" && k !== "from" && k !== "to" && !Array.isArray(f[k])) f[k] = [];
+      S.filters = f;
+    }
   } catch (e) {}
   S.theme = localStorage.getItem(KEY.theme) || "system";
 }
@@ -45,13 +55,14 @@ function loadStore() {
 function saveSettings() { try { localStorage.setItem(KEY.settings, JSON.stringify(S.settings)); } catch (e) {} }
 function saveData() { try { localStorage.setItem(KEY.data, JSON.stringify({ raw: S.raw, file: S.file, sheet: S.sheet })); } catch (e) { UI.toast("الملف أكبر من التخزين المحلي", { error: true }); } }
 let uiT = 0;
-function saveUi() { clearTimeout(uiT); uiT = setTimeout(() => { try { localStorage.setItem(KEY.ui, JSON.stringify({ tab: S.tab, sel: S.sel, pview: S.pview, vsort: S.vsort, advOpen: S.advOpen, filters: S.filters })); } catch (e) {} }, 150); }
+function saveUi() { clearTimeout(uiT); uiT = setTimeout(() => { try { localStorage.setItem(KEY.ui, JSON.stringify({ tab: S.tab, sel: S.sel, pview: S.pview, vsort: S.vsort, advOpen: S.advOpen, filters: S.filters, excl: S.excl })); } catch (e) {} }, 150); }
 
 const darkMq = matchMedia("(prefers-color-scheme: dark)");
 function applyTheme() {
   const t = S.theme === "system" ? (darkMq.matches ? "dark" : "light") : S.theme;
   document.documentElement.dataset.theme = t;
-  document.querySelector('meta[name="theme-color"]').content = t === "dark" ? "#121211" : "#f3efe6";
+  const tc = document.querySelector('meta[name="theme-color"]');
+  if (tc) tc.content = t === "dark" ? "#121211" : "#f5f1ea";
   const b = document.getElementById("theme-btn");
   if (b) { b.innerHTML = UI.icons[S.theme === "system" ? "auto" : S.theme === "dark" ? "moon" : "sun"]; b.title = { system: "المظهر: تلقائي", dark: "المظهر: داكن", light: "المظهر: فاتح" }[S.theme]; b.setAttribute("aria-label", b.title); }
 }
@@ -64,9 +75,15 @@ function rebuild() {
   ver++;
 }
 function currentResult() {
-  const k = ver + "|" + JSON.stringify(S.filters);
+  const k = ver + "|" + JSON.stringify(S.filters) + "|" + S.excl.join(",");
   if (k !== cacheKey) { cacheKey = k; cacheVal = ENG.filter(S.filters); }
   return { ...cacheVal, persons: cacheVal.persons.slice(), visits: cacheVal.visits };
+}
+function toggleExcl(ids, on) {
+  const s = new Set(S.excl);
+  for (const id of ids) on ? s.add(id) : s.delete(id);
+  S.excl = [...s];
+  saveUi(); update();
 }
 
 function bounds() { const v = ENG.M.visits; return v.length ? { a: v[0].d, z: v[v.length - 1].d } : { a: "", z: "" }; }
@@ -156,6 +173,7 @@ document.fonts?.ready.then(() => UI.schedule(snapInk));
 
 function renderView() {
   const v = document.getElementById("view");
+  v.onclick = null;
   if (!ENG.M.visits.length) return VIEWS.welcome(v);
   const fn = { dash: VIEWS.dash, visits: VIEWS.visits, people: VIEWS.people, prices: VIEWS.prices }[S.tab] || VIEWS.dash;
   fn(v);
@@ -185,6 +203,7 @@ document.addEventListener("dragleave", () => { dragN = Math.max(0, dragN - 1); i
 document.addEventListener("drop", e => { e.preventDefault(); dragN = 0; document.body.classList.remove("dragging"); const f = e.dataTransfer.files[0]; if (f) loadFile(f); });
 document.addEventListener("keydown", e => {
   if (document.querySelector(".modal") || /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  if (e.key === "Escape" && S.editMode) { S.editMode = false; update(); return; }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "o") { e.preventDefault(); document.getElementById("file-input").click(); }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "p" && ENG.M.visits.length) { e.preventDefault(); REPORT.dialog(); }
   if (e.altKey && /^[1-4]$/.test(e.key) && ENG.M.visits.length) { e.preventDefault(); setTab(["dash", "visits", "people", "prices"][+e.key - 1]); }
