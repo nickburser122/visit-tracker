@@ -68,7 +68,7 @@ function currentResult() {
 
 function bounds() { const v = ENG.M.visits; return v.length ? { a: v[0].d, z: v[v.length - 1].d } : { a: "", z: "" }; }
 function resetFilters() { S.filters = BLANK_FILTERS(); }
-function update() { UI.schedule(renderView); UI.schedule(FILTERS.syncChips); }
+function update() { S.vlimit = 200; UI.schedule(renderView); UI.schedule(FILTERS.syncChips); }
 
 const loadFile = f => IO.load(f);
 
@@ -114,14 +114,28 @@ function renderTabs(has) {
   if (!tabs.querySelector(".tab-ink")) {
     tabs.innerHTML = T.map(([k], i) => '<button class="tab" role="tab" data-tab="' + k + '" title="Alt+' + (i + 1) + '"></button>').join("") + '<span class="tab-ink" aria-hidden="true"></span>';
     tabs.onclick = e => { const b = e.target.closest("[data-tab]"); if (b) setTab(b.dataset.tab); };
+    tabs.onkeydown = tabKeys;
   }
   T.forEach(([k, l, c, cls]) => {
     const b = tabs.querySelector('[data-tab="' + k + '"]');
     const h = l + (c != null ? '<span class="cnt ' + (cls || "") + '">' + c + "</span>" : "");
     b.setAttribute("aria-selected", S.tab === k);
+    b.tabIndex = S.tab === k ? 0 : -1;
     if (b.dataset.h !== h) { b.dataset.h = h; b.innerHTML = h; }
   });
   requestAnimationFrame(() => moveInk(!tabs.querySelector(".tab-ink.on")));
+}
+function tabKeys(e) {
+  const list = [...e.currentTarget.querySelectorAll("[data-tab]")];
+  const i = list.indexOf(document.activeElement);
+  if (i < 0) return;
+  const rtl = getComputedStyle(e.currentTarget).direction === "rtl";
+  const to = { ArrowRight: rtl ? i - 1 : i + 1, ArrowLeft: rtl ? i + 1 : i - 1, Home: 0, End: list.length - 1 }[e.key];
+  if (to == null) return;
+  e.preventDefault();
+  const b = list[(to + list.length) % list.length];
+  b.focus();
+  setTab(b.dataset.tab);
 }
 function moveInk(snap) {
   const tabs = document.getElementById("main-tabs"), a = tabs.querySelector('[aria-selected="true"]'), ink = tabs.querySelector(".tab-ink");

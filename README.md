@@ -38,7 +38,7 @@ Works out travel allowances (بدلات المرور) from the inspection-visits
   - Undo toasts.
   - Bottom sheets on mobile.
   - Visits shown as cards on mobile, with infinite scroll.
-  - Alt+1–4 switches tabs, Ctrl+P opens the PDF dialog, / focuses search.
+  - Alt+1–4 or the arrow keys switch tabs, Ctrl+P opens the PDF dialog, / focuses search.
 
 ## Files
 `index.html` · `css/style.css` · `js/data.js` · `js/xlsx.js` · `js/ui.js` · `js/engine.js` · `js/picker.js` · `js/filters.js` · `js/io.js` · `js/report.js` · `js/views.js` · `js/app.js` · `images/logo.jpg`, `images/icon.jpg`

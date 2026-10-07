@@ -6,7 +6,6 @@ const PICKER = (() => {
   const shiftMonth = (m, n) => { let y = +m.slice(0, 4), k = +m.slice(5) - 1 + n; y += Math.floor(k / 12); k = ((k % 12) + 12) % 12; return y + "-" + p2(k + 1); };
   const mStart = m => m + "-01";
   const mEnd = m => m + "-" + p2(lastDay(+m.slice(0, 4), +m.slice(5)));
-  const clampD = (d, a, z) => d < a ? a : d > z ? z : d;
 
   function presets(bounds) {
     const z = bounds.z, a = bounds.a;

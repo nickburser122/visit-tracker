@@ -106,6 +106,7 @@ body.scrolled .tabs{box-shadow:var(--sh)}
 .omni:focus-within,.omni.open{border-color:var(--mk2);color:var(--mk)}
 .omni input{flex:1;background:transparent;border:0;outline:none;padding:9px 0;color:var(--mk);min-width:0}
 .omni input::placeholder{color:var(--mu)}
+@media(hover:none){.omni kbd{display:none}}
 .f-toggle{flex:none;min-height:44px}
 .f-toggle.has{border-color:var(--mk2)}
 .f-adv{display:grid;grid-template-rows:0fr;grid-template-columns:minmax(0,1fr);transition:grid-template-rows .28s var(--ease),opacity .2s,margin .28s var(--ease);opacity:0;margin-top:-10px}
@@ -293,7 +294,7 @@ body.scrolled .tabs{box-shadow:var(--sh)}
 .alert span{flex:1}
 .alert b{font-weight:500}
 
-.kpis{display:grid;gap:12px;grid-template-columns:repeat(6,minmax(0,1fr));margin-bottom:14px}
+.kpis{display:grid;gap:12px;grid-template-columns:minmax(0,1.5fr) repeat(5,minmax(0,1fr));margin-bottom:14px}
 .kpis.sub{grid-template-columns:repeat(4,minmax(0,1fr))}
 .kpi{background:var(--pn);border:1px solid var(--ln);border-radius:var(--r-lg);padding:16px 18px;display:flex;flex-direction:column;gap:4px;min-height:116px;min-width:0}
 .kpi.hero{background:var(--mk);color:var(--ink);border-color:var(--mk)}

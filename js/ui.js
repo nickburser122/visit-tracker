@@ -254,6 +254,14 @@ const UI = (() => {
     };
     modals.push(m);
     m.addEventListener("click", e => { if (e.target === m || e.target.closest("[data-x]")) done(); });
+    m.addEventListener("keydown", e => {
+      if (e.key !== "Tab") return;
+      const f = [...m.querySelectorAll('button:not(:disabled),input:not(:disabled),select,textarea,a[href],[tabindex]:not([tabindex="-1"])')].filter(x => x.offsetParent !== null);
+      if (!f.length) return;
+      const a = f[0], z = f[f.length - 1], cur = document.activeElement;
+      if (e.shiftKey && (cur === a || !m.contains(cur))) { e.preventDefault(); z.focus(); }
+      else if (!e.shiftKey && cur === z) { e.preventDefault(); a.focus(); }
+    });
     m.close = done;
     requestAnimationFrame(() => { m.classList.add("show"); const f = m.querySelector("[autofocus]") || m.querySelector(".modal-ft .solid"); f && !mobile() && f.focus({ preventScroll: true }); });
     return m;

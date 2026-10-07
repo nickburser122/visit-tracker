@@ -84,7 +84,6 @@ const IO = (() => {
 
     function sheetCard(s, i) {
       const r = s.r, st = r.stat;
-      const hdrs = ENG.headersOf(r);
       const conf = k => r.cols[k] == null ? "miss" : (r.conf[k] || 0) >= .6 ? "ok" : "low";
       const months = r.months || [];
       const issues = [];
@@ -103,7 +102,7 @@ const IO = (() => {
         '<header><label class="chk"><input type="checkbox" data-on="' + i + '"' + (s.on ? " checked" : "") + (r.ok ? "" : " disabled") + '><span class="box">' + icons.check + '</span><span><b>' + esc(r.name) + '</b><small>' + (r.ok ? r.rows.length + "/" + (st ? st.rows : r.rows.length) + " صف" + (months.length ? " · " + (months.length === 1 ? UI.mlabel(months[0]) : UI.mlabel(months[0]) + " ← " + UI.mlabel(months[months.length - 1])) : "") : "ليست جدول زيارات") + "</small></span></label>" +
         (r.ok ? '<span class="q-badge ' + (r.quality > .9 ? "hi" : r.quality > .6 ? "md" : "lo") + '">' + Math.round(r.quality * 100) + "%</span>" : "") +
         '<button type="button" class="lnk" data-tog="' + i + '">' + "الأعمدة" + icons.chevD + "</button></header>" +
-        (s.open ? '<div class="imp-map">' + ENG.HEAD_KEYS.map(k => '<div class="map-f ' + conf(k) + '"><span><i></i>' + FIELD[k] +  + '</span><span data-col="' + i + ":" + k + '"></span></div>').join("") + '<div class="map-f"><span>التاريخ</span><span class="seg sm" data-ord="' + i + '"><button type="button" data-o="dmy" aria-pressed="' + (r.order !== "mdy") + '">يوم/شهر</button><button type="button" data-o="mdy" aria-pressed="' + (r.order === "mdy") + '">شهر/يوم</button></span></div></div>' +
+        (s.open ? '<div class="imp-map">' + ENG.HEAD_KEYS.map(k => '<div class="map-f ' + conf(k) + '"><span><i></i>' + FIELD[k] + '</span><span data-col="' + i + ":" + k + '"></span></div>').join("") + '<div class="map-f"><span>التاريخ</span><span class="seg sm" data-ord="' + i + '"><button type="button" data-o="dmy" aria-pressed="' + (r.order !== "mdy") + '">يوم/شهر</button><button type="button" data-o="mdy" aria-pressed="' + (r.order === "mdy") + '">شهر/يوم</button></span></div></div>' +
           (sample.length ? '<div class="tw imp-prev"><table><thead><tr><th>التاريخ</th><th>الجهة</th><th>الغرض</th><th>الأفراد</th><th>سيارة</th></tr></thead><tbody>' + sample.map(x => "<tr><td>" + esc(UI.dlabel(x.d)) + "</td><td>" + esc(x.ent) + "</td><td>" + esc(x.g) + "</td><td>" + esc(x.people.join("، ")) + "</td><td>" + (x.car ? "✓" : x.cp ? esc(x.cp.join("، ")) : "—") + "</td></tr>").join("") + "</tbody></table></div>" : "") : "") +
         (issues.length ? '<ul class="imp-issues">' + issues.map(t => "<li>" + esc(t) + "</li>").join("") + "</ul>" : "") +
         "</article>";
@@ -207,7 +206,7 @@ const IO = (() => {
 
   function periodName() {
     const f = S.filters;
-    if (f.from) return f.from + "_" + f.to;
+    if (f.from) return f.from + (f.to && f.to !== f.from ? "_" + f.to : "");
     if (f.months.length) return f.months[0] + (f.months.length > 1 ? "_" + f.months[f.months.length - 1] : "");
     return "all";
   }

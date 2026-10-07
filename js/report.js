@@ -28,7 +28,7 @@ const REPORT = (() => {
     return [scale(mil, "مليون", "مليونان", "ملايين", "مليون"), scale(th, "ألف", "ألفان", "آلاف", "ألف"), rest ? under1000(rest) : ""].filter(Boolean).join(" و");
   }
   function tafqit(v) {
-    const pounds = Math.floor(v + 1e-9), pi = Math.round((v - pounds) * 100);
+    const cents = Math.round(v * 100), pounds = Math.floor(cents / 100), pi = cents % 100;
     let s = "فقط " + words(pounds) + " جنيهاً";
     if (pi) s += " و" + words(pi) + " قرشاً";
     return s + " لا غير";
@@ -177,7 +177,7 @@ const REPORT = (() => {
       '<div class="rp-sec"><h4>الأفراد</h4><div id="rp-people"></div></div>' +
       '<div class="rp-sec"><h4>الترويسة</h4><label class="fl"><span>الجهة</span><input class="txt" id="rp-org" value="' + esc(st.org.name) + '"></label><label class="fl"><span>الفرع / الإدارة</span><input class="txt" id="rp-br" value="' + esc(st.org.branch) + '"></label><label class="fl"><span>عنوان الكشف</span><input class="txt" id="rp-title" value="' + esc(st.org.title) + '"></label><label class="fl"><span>التوقيعات (مفصولة بفاصلة)</span><input class="txt" id="rp-signs" value="' + esc(st.org.signs.join("، ")) + '"></label></div>' +
       '</aside><div class="rp-prev"><div class="rp-bar"><span id="rp-info" class="mut sm"></span><span class="row"><button type="button" class="icon-btn sm" data-z="-1" aria-label="تصغير">−</button><button type="button" class="icon-btn sm" data-z="1" aria-label="تكبير">+</button></span></div><div class="rp-scroll"><div id="rp-pages" class="rp-pages"></div></div></div></div>',
-      '<button class="btn" id="rp-xl">' + icons.sheet + 'Excel</button><button class="btn solid" id="rp-go">' + icons.print + "طباعة / PDF</button>", { cls: "xl", sub: esc(IO.periodLabel()) + " · " + R.visits.length + " زيارة · " + R.persons.length + " فرد" });
+      '<button class="btn" id="rp-xl">' + icons.sheet + 'Excel</button><button class="btn solid" id="rp-go">' + icons.print + "طباعة / PDF</button>", { cls: "xl", onClose: () => removeEventListener("resize", fit), sub: esc(IO.periodLabel()) + " · " + R.visits.length + " زيارة · " + R.persons.length + " فرد" });
     const pagesEl = m.querySelector("#rp-pages");
     let zoom = UI.mobile() ? .42 : .62;
     const fit = () => { const w = m.querySelector(".rp-scroll").clientWidth - 24; const base = w / (210 * 3.78); zoom = Math.max(.3, Math.min(1, base)); pagesEl.style.setProperty("--z", zoom); };
@@ -199,7 +199,7 @@ const REPORT = (() => {
     m.querySelector("#rp-go").onclick = () => { saveOrg(); if (!o.summary && !o.statements) return UI.toast("اختر صفحة واحدة على الأقل", { error: true }); m.close(); printReport({ ...o }); };
     m.querySelector("#rp-xl").onclick = () => { saveOrg(); const r = currentResult(); if (o.people.length) r.persons = r.persons.filter(p => o.people.includes(p.key)); IO.exportExcel(r); };
     requestAnimationFrame(() => { fit(); refresh(); });
-    addEventListener("resize", fit, { once: true });
+    addEventListener("resize", fit);
   }
 
   return { dialog, printReport, tafqit };
