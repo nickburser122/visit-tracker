@@ -7,19 +7,20 @@
 <meta name="color-scheme" content="dark light">
 <meta name="description" content="عدّاد — حساب بدلات الانتقال والمرور من ملف Excel وإصدار كشوف PDF رسمية">
 <title>عدّاد · بدلات المرور</title>
-<link rel="icon" type="image/jpeg" href="images/icon.jpg">
+<link rel="icon" type="image/svg+xml" href="images/logo.svg">
+<link rel="alternate icon" type="image/jpeg" href="images/icon.jpg">
 <link rel="apple-touch-icon" href="images/logo.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;500;600;700&display=swap">
 <link rel="stylesheet" href="css/style.css">
-<script>(function(){var t=localStorage.getItem("addad2.theme")||"system";if(t==="system")t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.theme=t})()</script>
+<script>(function(){var t="system";try{t=localStorage.getItem("addad2.theme")||"system"}catch(e){}if(t==="system")t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.theme=t;var m=document.querySelector('meta[name="theme-color"]');if(m)m.content=t==="dark"?"#15171a":"#f4f2ee"})()</script>
 </head>
 <body>
 <div class="wrap">
   <header class="topbar" id="top-bar">
     <div class="brand">
-      <img src="images/logo.jpg" alt="شعار عدّاد" width="44" height="44">
+      <svg class="logo" viewBox="0 0 100 100" role="img" aria-label="شعار عدّاد"><rect class="lg-bg" x="1" y="1" width="98" height="98" rx="24"/><path class="lg-trk" d="M23.69 69.58A28 28 0 1 1 76.31 69.58"/><path class="lg-arc" d="M23.69 69.58A28 28 0 0 1 71.45 42"/><path class="lg-ndl" d="M50 60L65.32 47.14"/><circle class="lg-hub" cx="50" cy="60" r="8"/><circle class="lg-hole" cx="50" cy="60" r="3.2"/></svg>
       <div><h1>عدّاد</h1><p id="file-info">بدلات وانتقالات المرور</p></div>
     </div>
     <div class="top-actions" id="top-actions"></div>

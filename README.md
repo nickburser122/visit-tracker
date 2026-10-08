@@ -31,6 +31,21 @@ Works out travel allowances (بدلات المرور) from the inspection-visits
   - Cost appears only as a **note**: the estimated total at current prices, a breakdown, and a statement of the calculation basis. It says clearly that prices change and that the note is not a payment document. An optional "prices used" table can be added.
   - Live A4 preview with automatic pagination: tables continue across pages, and short tables are not split. Export to **PDF** (print) or **XLSX** (one sheet per section). Your options are remembered.
 
+## Logo (v3.1)
+- The logo is now an inline SVG gauge built by `UI.logo()` (and inlined in `index.html` for the header). Its colours come from the theme variables, so it follows light/dark mode and the iris accent: tile `--pn`, track `--mk` at 14%, arc `--acc`, needle/hub `--mk`.
+- Printed reports override the variables to fixed print colours (white tile, `#626a9e` arc, black needle).
+- Favicon: `images/logo.svg`, which follows the OS colour scheme through `prefers-color-scheme`. `images/icon.jpg` and `images/logo.jpg` stay as fallback and apple-touch icons.
+
+## Polish & fixes (v3.1)
+- The theme-color meta is set before first paint, and localStorage access is guarded (private mode / blocked storage).
+- Keyboard shortcuts also work with Arabic keyboard layouts (matched on `e.code`) and are ignored inside contenteditable/select.
+- XLSX writer: unique, valid sheet names (no `/ \ ? * [ ] :`, ≤31 chars), and `NaN`/`Infinity` cells are skipped so the file isn't corrupted.
+- The prices tab binds only the price inputs (`input[data-city]`), not the confirm buttons that share the attribute.
+- Corrupted stored lists (exceptions / zero entities) fall back to the defaults.
+- Danger confirm buttons are red again (the accent override had hidden them).
+- On mobile, toasts sit above the modal footer while a dialog is open.
+- Dropping something that isn't a file no longer blocks the browser's default behaviour.
+
 ## Entry points
 - `index.html`: the app. `index.html?demo` loads demo data, `#open=report` opens the report dialog, `#open=filters` expands the filter board.
 

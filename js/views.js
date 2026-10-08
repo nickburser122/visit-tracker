@@ -18,7 +18,7 @@ const VIEWS = (() => {
   });
 
   function welcome(v) {
-    v.innerHTML = '<section class="hero-drop"><button type="button" class="drop" id="drop-zone"><img src="images/logo.jpg" alt=""><b>اسحب ملف المرور هنا</b><span>xlsx · csv</span><span class="btn solid">' + icons.upload + 'اختيار ملف</span></button>' +
+    v.innerHTML = '<section class="hero-drop"><button type="button" class="drop" id="drop-zone">' + UI.logo() + '<b>اسحب ملف المرور هنا</b><span>xlsx · csv</span><span class="btn solid">' + icons.upload + 'اختيار ملف</span></button>' +
       '<div class="row center"><button class="btn" id="w-tpl">' + icons.dl + 'القالب</button><button class="btn ghost" id="w-demo">' + icons.spark + "بيانات تجريبية</button></div></section>";
     v.querySelector("#drop-zone").onclick = () => document.getElementById("file-input").click();
     v.querySelector("#w-tpl").onclick = () => IO.template(false);
@@ -286,7 +286,7 @@ const VIEWS = (() => {
     const bind = (sel, fn, re) => v.querySelectorAll(sel).forEach(i => { i.onchange = () => { fn(i, parseNum(i.value)); re ? redraw() : save(); }; i.onkeydown = e => { if (e.key === "Enter") i.blur(); }; });
     bind("[data-cls]", (i, n) => st.classAmount[i.dataset.cls] = n);
     bind("[data-allow]", (i, n) => st.carAllowance[i.dataset.allow] = n);
-    bind("[data-city]", (i, n) => st.prices[i.dataset.city] = n);
+    bind("input[data-city]", (i, n) => st.prices[i.dataset.city] = n);
     bind("[data-km]", (i, n) => st.km[i.dataset.km] = n, !cityMode);
     bind("#s-far", (i, n) => st.farKm = n == null ? FAR_KM : n, true);
     bind("#s-svc", (i, n) => st.servicePrice = n);

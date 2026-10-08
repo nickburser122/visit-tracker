@@ -21,8 +21,8 @@ function loadStore() {
         km: v >= 5 ? { ...base.km, ...(s.km || {}) } : base.km,
         allow: { ...base.allow, ...(s.allow || {}) },
         servicePrice: v >= 5 ? s.servicePrice : base.servicePrice,
-        exceptions: v >= 8 ? s.exceptions : NEW_EXCEPTIONS.reduce((l, [n, c]) => addException(l, n, c), v >= 5 ? s.exceptions || base.exceptions : (s.exceptions || base.exceptions).filter(x => NZ(x.name) !== NZ("المخازن الطبية"))),
-        zeroEntities: s.zeroEntities || base.zeroEntities,
+        exceptions: v >= 8 ? (Array.isArray(s.exceptions) ? s.exceptions : base.exceptions) : NEW_EXCEPTIONS.reduce((l, [n, c]) => addException(l, n, c), v >= 5 ? s.exceptions || base.exceptions : (s.exceptions || base.exceptions).filter(x => NZ(x.name) !== NZ("المخازن الطبية"))),
+        zeroEntities: Array.isArray(s.zeroEntities) ? s.zeroEntities : base.zeroEntities,
         classAmount: { ...base.classAmount, ...(s.classAmount || {}) },
         carAllowance: { ...base.carAllowance, ...(s.carAllowance || {}) },
         org: { ...base.org, ...(s.org || {}) },
@@ -51,7 +51,8 @@ function loadStore() {
       S.filters = f;
     }
   } catch (e) {}
-  S.theme = localStorage.getItem(KEY.theme) || "system";
+  try { S.theme = localStorage.getItem(KEY.theme) || "system"; } catch (e) { S.theme = "system"; }
+  if (!["system", "dark", "light"].includes(S.theme)) S.theme = "system";
 }
 
 function saveSettings() { try { localStorage.setItem(KEY.settings, JSON.stringify(S.settings)); } catch (e) {} }
@@ -124,7 +125,7 @@ function renderTop() {
     { icon: ic.dl, label: "قالب فارغ", run: () => IO.template(false) }
   ], { title: "المزيد" }));
   on("act-tpl", () => IO.template(false));
-  on("theme-btn", () => { S.theme = { system: "dark", dark: "light", light: "system" }[S.theme]; localStorage.setItem(KEY.theme, S.theme); applyTheme(); UI.toast(document.getElementById("theme-btn").title); });
+  on("theme-btn", () => { S.theme = { system: "dark", dark: "light", light: "system" }[S.theme] || "system"; try { localStorage.setItem(KEY.theme, S.theme); } catch (e) {} applyTheme(); UI.toast(document.getElementById("theme-btn").title); });
   applyTheme();
   renderTabs(has);
 }
@@ -204,14 +205,18 @@ let dragN = 0;
 document.addEventListener("dragenter", e => { if (![...(e.dataTransfer?.types || [])].includes("Files")) return; e.preventDefault(); dragN++; document.body.classList.add("dragging"); });
 document.addEventListener("dragover", e => { if ([...(e.dataTransfer?.types || [])].includes("Files")) e.preventDefault(); });
 document.addEventListener("dragleave", () => { dragN = Math.max(0, dragN - 1); if (!dragN) document.body.classList.remove("dragging"); });
-document.addEventListener("drop", e => { e.preventDefault(); dragN = 0; document.body.classList.remove("dragging"); const f = e.dataTransfer.files[0]; if (f) loadFile(f); });
+document.addEventListener("drop", e => { dragN = 0; document.body.classList.remove("dragging"); const f = e.dataTransfer && e.dataTransfer.files[0]; if (!f) return; e.preventDefault(); loadFile(f); });
 document.addEventListener("keydown", e => {
-  if (document.querySelector(".modal") || /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
-  if (e.key === "Escape" && S.editMode) { S.editMode = false; update(); return; }
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "o") { e.preventDefault(); document.getElementById("file-input").click(); }
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "p" && ENG.M.visits.length) { e.preventDefault(); REPORT.dialog(); }
-  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "r" && ENG.M.visits.length) { e.preventDefault(); ACT.dialog(); }
-  if (e.altKey && /^[1-4]$/.test(e.key) && ENG.M.visits.length) { e.preventDefault(); setTab(["dash", "visits", "people", "prices"][+e.key - 1]); }
+  const ae = document.activeElement;
+  if (document.querySelector(".modal") || (ae && (/INPUT|TEXTAREA|SELECT/.test(ae.tagName) || ae.isContentEditable))) return;
+  const key = (e.key || "").toLowerCase(), code = e.code || "", mod = e.ctrlKey || e.metaKey;
+  const is = (ch, c) => key === ch || code === c;
+  if (key === "escape" && S.editMode) { S.editMode = false; update(); return; }
+  if (mod && is("o", "KeyO")) { e.preventDefault(); document.getElementById("file-input").click(); return; }
+  if (mod && is("p", "KeyP") && ENG.M.visits.length) { e.preventDefault(); REPORT.dialog(); return; }
+  if (mod && !e.shiftKey && is("r", "KeyR") && ENG.M.visits.length) { e.preventDefault(); ACT.dialog(); return; }
+  const dg = /^Digit([1-4])$/.exec(code) || /^([1-4])$/.exec(key);
+  if (e.altKey && !mod && dg && ENG.M.visits.length) { e.preventDefault(); setTab(["dash", "visits", "people", "prices"][+dg[1] - 1]); }
 });
 addEventListener("scroll", () => document.body.classList.toggle("scrolled", scrollY > 8), { passive: true });
 

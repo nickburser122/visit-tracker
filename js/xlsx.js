@@ -172,10 +172,18 @@ const XL = (() => {
 
   function write(sheets) {
     const files = [];
+    const used = new Set();
+    sheets = sheets.map((s, i) => {
+      const base = (String(s.name || "").replace(/[\[\]:*?\/\\]/g, " ").replace(/^'+|'+$/g, "").trim() || "Sheet" + (i + 1)).slice(0, 31);
+      let name = base, n = 2;
+      while (used.has(name.toLowerCase())) { const suf = " (" + n++ + ")"; name = base.slice(0, 31 - suf.length) + suf; }
+      used.add(name.toLowerCase());
+      return { ...s, name };
+    });
     sheets.forEach((sh, si) => {
       const total = sh.total ? sh.rows.length - 1 : -1;
       const rows = sh.rows.map((r, ri) => '<row r="' + (ri + 1) + '">' + r.map((v, ci) => {
-        if (v == null || v === "") return "";
+        if (v == null || v === "" || (typeof v === "number" && !isFinite(v))) return "";
         const ref = colName(ci) + (ri + 1);
         const st = ri === 0 ? ' s="1"' : ri === total ? ' s="2"' : typeof v === "number" ? ' s="3"' : "";
         if (typeof v === "number" && isFinite(v)) return '<c r="' + ref + '"' + st + "><v>" + v + "</v></c>";

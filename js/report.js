@@ -34,7 +34,6 @@ const REPORT = (() => {
     return s + " لا غير";
   }
 
-  const LOGO = "images/logo.jpg";
   const ROWS_FIRST = 24, ROWS_CONT = 31, CLOSE_ROWS = 8, SUM_FIRST = 18, SUM_CONT = 28;
   const amt = a => a == null ? '<span class="r-nil">غير محدد</span>' : fm2(a);
 
@@ -45,7 +44,7 @@ const REPORT = (() => {
   }
 
   function header(st, title, sub, ref) {
-    return '<header class="r-head"><div class="r-org"><img src="' + LOGO + '" alt=""><div><b>' + esc(st.org.name) + "</b><span>" + esc(st.org.branch) + '</span></div></div><div class="r-title"><h1>' + esc(title) + "</h1><p>" + esc(sub) + '</p></div><div class="r-meta"><div><span>رقم المرجع</span><b>' + esc(ref) + '</b></div><div><span>تاريخ الإصدار</span><b>' + UI.dlabel(UI.today()) + "</b></div></div></header>";
+    return '<header class="r-head"><div class="r-org">' + UI.logo() + '<div><b>' + esc(st.org.name) + "</b><span>" + esc(st.org.branch) + '</span></div></div><div class="r-title"><h1>' + esc(title) + "</h1><p>" + esc(sub) + '</p></div><div class="r-meta"><div><span>رقم المرجع</span><b>' + esc(ref) + '</b></div><div><span>تاريخ الإصدار</span><b>' + UI.dlabel(UI.today()) + "</b></div></div></header>";
   }
   const footer = (st, n, tot) => '<footer class="r-foot"><span>' + esc(st.org.name) + " · " + esc(st.org.branch) + "</span><span>صفحة " + n + " من " + tot + "</span></footer>";
   const signs = (list, extra) => '<div class="r-signs">' + [...(extra ? [extra] : []), ...list.filter(Boolean)].map(s => '<div><span>' + esc(s) + "</span><i></i><small>الاسم: ............................</small></div>").join("") + "</div>";

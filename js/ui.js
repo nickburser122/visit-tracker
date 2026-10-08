@@ -61,6 +61,8 @@ const UI = (() => {
     trash: svg('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>')
   };
 
+  const logo = cls => '<svg class="logo' + (cls ? " " + cls : "") + '" viewBox="0 0 100 100" aria-hidden="true" focusable="false"><rect class="lg-bg" x="1" y="1" width="98" height="98" rx="24"/><path class="lg-trk" d="M23.69 69.58A28 28 0 1 1 76.31 69.58"/><path class="lg-arc" d="M23.69 69.58A28 28 0 0 1 71.45 42"/><path class="lg-ndl" d="M50 60L65.32 47.14"/><circle class="lg-hub" cx="50" cy="60" r="8"/><circle class="lg-hole" cx="50" cy="60" r="3.2"/></svg>';
+
   let raf = 0, queued = [];
   function schedule(fn) {
     if (!queued.includes(fn)) queued.push(fn);
@@ -328,5 +330,5 @@ const UI = (() => {
     setTimeout(() => URL.revokeObjectURL(a.href), 3000);
   }
 
-  return { esc, fm, fm2, pct, p2, lastDay, today, addDays, dlabel, dshort, mlabel, wday, rangeLabel, dateCell, icons, schedule, debounce, mobile, open, close, isOpen, place: () => cur && place(), popBody, menu, multi, single, modal, confirm, toast, donut, download };
+  return { logo, esc, fm, fm2, pct, p2, lastDay, today, addDays, dlabel, dshort, mlabel, wday, rangeLabel, dateCell, icons, schedule, debounce, mobile, open, close, isOpen, place: () => cur && place(), popBody, menu, multi, single, modal, confirm, toast, donut, download };
 })();
