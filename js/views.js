@@ -30,13 +30,13 @@ const VIEWS = (() => {
     return rows.map(r => '<button class="bar-row' + (on.has(r.k) ? " on" : "") + '" data-f="' + key + '" data-k="' + esc(r.k) + '"><span class="nm">' + r.l + '</span><span class="tr">' + r.parts.map((p, i) => '<i class="' + ["", "b", "c"][i] + '" style="width:' + (p / max * 100) + '%"></i>').join("") + '</span><span class="vl">' + fmtV(r) + "</span></button>").join("");
   }
 
-  function group(items, keyFn) {
+  function group(items, keyFn, byVisit) {
     const o = new Map();
     for (const it of items) {
       const k = keyFn(it.v);
       let g = o.get(k);
-      if (!g) o.set(k, g = { n: new Set(), sum: 0, miss: 0, car: new Set() });
-      g.n.add(it.v); g.sum += it.sum; g.miss += it.miss;
+      if (!g) o.set(k, g = { n: new Set(), sum: 0, miss: 0, car: new Set(), acts: 0 });
+      g.n.add(byVisit ? it.v.V : it.v); g.sum += it.sum; g.miss += it.miss; g.acts++;
       if (it.p.car) g.car.add(it.v);
     }
     return [...o.entries()].sort((a, b) => b[1].n.size - a[1].n.size);
@@ -56,12 +56,12 @@ const VIEWS = (() => {
     const kind = { travel: 0, class: 0, service: 0, allow: 0 };
     let pc = 0, saved = 0, inSum = 0, inN = 0;
     const days = new Set(), months = {};
-    for (const x of vis) { days.add(x.d); if (x.city === DAMANHOUR) inN++; (months[x.m] || (months[x.m] = { n: 0, sum: 0 })).n++; }
+    for (const x of vis) { days.add(x.d); if (x.inD) inN++; (months[x.m] || (months[x.m] = { n: 0, sum: 0 })).n++; }
     for (const it of R.items) {
       for (const k in it.k) kind[k] += it.k[k];
       months[it.v.m].sum += it.sum;
       if (it.v.city === DAMANHOUR) inSum += it.sum;
-      if (it.p.car) { pc++; const alt = ENG.nocarCost(it.v, it.p); if (alt != null) saved += Math.max(0, alt - it.sum); }
+      if (it.p.car) { pc++; saved += Math.max(0, it.save); }
     }
     const mk = Object.keys(months).sort(), nM = mk.length;
     const outSum = total - inSum;
@@ -77,9 +77,9 @@ const VIEWS = (() => {
 
     h += '<div class="kpis">' +
       '<div class="kpi hero"><span class="k-l">إجمالي المستحق</span><span class="k-v">' + fm(total) + "<small>جنيه</small></span><span class=\"k-s\">" + (prev ? delta(total, prev.sum) + " عن " + esc(prev.label) + " · " + fm(prev.sum) : nM > 1 ? fm(total / nM) + " / شهر" : "") + (miss ? " · +" + miss + " بلا سعر" : "") + "</span></div>" +
-      '<div class="kpi"><span class="k-l">الزيارات</span><span class="k-v">' + vis.length + '</span><span class="k-s">' + (prev ? delta(vis.length, prev.n) + " · " : "") + days.size + " يوم · " + (parts / vis.length).toFixed(1) + " فرد/زيارة</span></div>" +
-      '<div class="kpi"><span class="k-l">تكلفة الزيارة</span><span class="k-v">' + fm(Math.round(total / vis.length)) + '<small>جنيه</small></span><span class="k-s">' + fm(Math.round(total / parts)) + " لكل مشاركة</span></div>" +
-      '<div class="kpi"><span class="k-l">وفّرته سيارة الهيئة</span><span class="k-v">' + fm(Math.round(saved)) + '<small>جنيه</small></span><span class="k-s">' + pc + " مشاركة · " + pct(pc, parts) + '%</span><div class="ratio"><i style="width:' + pct(pc, parts) + '%"></i></div></div>' +
+      '<div class="kpi"><span class="k-l">الزيارات</span><span class="k-v">' + vis.length + '</span><span class="k-s">' + (prev ? delta(vis.length, prev.n) + " · " : "") + parts + " نشاط فردي · " + days.size + " يوم</span></div>" +
+      '<div class="kpi"><span class="k-l">تكلفة الزيارة</span><span class="k-v">' + fm(Math.round(total / vis.length)) + '<small>جنيه</small></span><span class="k-s">' + fm(Math.round(total / parts)) + " لكل نشاط فردي</span></div>" +
+      '<div class="kpi"><span class="k-l">وفّرته سيارة الهيئة</span><span class="k-v">' + fm(Math.round(saved)) + '<small>جنيه</small></span><span class="k-s">' + pc + " نشاط بالسيارة · " + pct(pc, parts) + '%</span><div class="ratio"><i style="width:' + pct(pc, parts) + '%"></i></div></div>' +
       '<div class="kpi"><span class="k-l">خارج دمنهور</span><span class="k-v">' + pct(outSum, total) + '<small>% من المبلغ</small></span><span class="k-s">' + (vis.length - inN) + " من " + vis.length + ' زيارة</span><div class="ratio"><i style="width:' + pct(outSum, total) + '%"></i></div></div>' +
       '<div class="kpi"><span class="k-l">الأعلى مستحقاً</span><span class="k-v nm">' + esc(top ? top.name : "—") + '</span><span class="k-s">' + (top ? fm(top.sum) + " · " + pct(top.sum, total) + "% من الإجمالي" : "") + "</span></div></div>";
 
@@ -87,7 +87,7 @@ const VIEWS = (() => {
     const mmax = Math.max(1, ...mk.map(k => months[k].sum));
     const msel = new Set(S.filters.months);
     h += '<div class="grid g2"><section class="panel"><div class="panel-hd"><h2>المستحق لكل فرد</h2><p>' + R.persons.length + " فرد · " + fm(total / (R.persons.length || 1)) + ' متوسط</p></div><div class="bars">' +
-      barList(R.persons.map(p => ({ k: p.key, l: esc(p.name), parts: [p.sum], p })), "people", maxP, r => money(r.p.sum, r.p.miss) + ' <span class="mut sm">· ' + r.p.items.length + "</span>") + "</div></section>";
+      barList(R.persons.map(p => ({ k: p.key, l: esc(p.name), parts: [p.sum], p })), "people", maxP, r => money(r.p.sum, r.p.miss) + ' <span class="mut sm">· ' + r.p.visits + " زيارة</span>") + "</div></section>";
     h += '<section class="panel"><div class="panel-hd"><h2>شهرياً</h2><p>' + (nM > 1 ? fm(total / nM) + " جنيه / شهر" : "") + '</p></div><div class="cols">' +
       mk.map(k => { const o = months[k]; return '<button class="col' + (msel.has(k) ? " on" : "") + '" data-f="months" data-k="' + k + '" title="' + UI.mlabel(k) + " · " + o.n + " زيارة · " + fm(o.sum) + ' جنيه"><b>' + fm(Math.round(o.sum)) + '</b><span class="stk" style="height:' + Math.max(2, o.sum / mmax * 100) + '%"><i style="flex:1"></i></span><small>' + MONTH_SHORT[+k.slice(5) - 1] + "<br>" + o.n + "</small></button>"; }).join("") + "</div></section></div>";
 
@@ -111,15 +111,15 @@ const VIEWS = (() => {
     const ents = bySum(group(R.items, x => x.ek)).slice(0, 10);
     const emax = Math.max(1, ...ents.map(c => c[1].sum));
     const entName = k => (ENG.M.meta.ents[k] || { l: k }).l;
-    const purp = group(R.items, x => x.pk);
+    const purp = group(R.items, x => x.V.pk, true);
     const pmax = Math.max(1, ...purp.map(p => p[1].n.size));
-    const car = { nocar: [new Set(), 0], car: [new Set(), 0] };
-    for (const it of R.items) { const c = car[it.p.car ? "car" : "nocar"]; c[0].add(it.v); c[1] += it.sum; }
+    const car = { nocar: [0, 0], car: [0, 0] };
+    for (const it of R.items) { const c = car[it.p.car ? "car" : "nocar"]; c[0]++; c[1] += it.sum; }
     const carSel = new Set(S.filters.car);
     const pm = ENG.M.meta.purp;
     h += '<div class="grid g2"><section class="panel"><div class="panel-hd"><div><h2>الزيارات حسب الغرض</h2><p>' + purp.length + ' غرض · كل غرض باسمه</p></div><button class="btn sm" data-act-report>' + icons.report + 'تقرير</button></div><div class="bars">' +
-      barList(purp.map(([k, o]) => ({ k, l: esc((pm[k] || { l: k }).l), parts: [o.n.size], o })), "purp", pmax, r => r.o.n.size + ' <span class="mut sm">زيارة · ' + r.o.car.size + " بالسيارة</span>") +
-      '</div><div class="dlist carlist">' + [["nocar", "بدون سيارة"], ["car", "بسيارة الهيئة"]].map(([k, l]) => '<button data-f="car" data-k="' + k + '" class="' + (carSel.has(k) ? "on" : "") + '"><span><span class="sw ' + k + '"></span>' + l + '</span><span class="mut">' + car[k][0].size + " زيارة · " + fm(car[k][1]) + " جنيه</span></button>").join("") + "</div></section>";
+      barList(purp.map(([k, o]) => ({ k, l: esc((pm[k] || { l: k }).l), parts: [o.n.size], o })), "purp", pmax, r => r.o.n.size + ' <span class="mut sm">زيارة · ' + r.o.acts + " نشاط</span>") +
+      '</div><div class="dlist carlist">' + [["nocar", "بدون سيارة"], ["car", "بسيارة الهيئة"]].map(([k, l]) => '<button data-f="car" data-k="' + k + '" class="' + (carSel.has(k) ? "on" : "") + '"><span><span class="sw ' + k + '"></span>' + l + '</span><span class="mut">' + car[k][0] + " نشاط · " + fm(car[k][1]) + " جنيه</span></button>").join("") + "</div></section>";
     h += '<section class="panel"><div class="panel-hd"><h2>الجهات حسب التكلفة</h2></div><div class="bars">' +
       barList(ents.map(([k, o]) => ({ k, l: esc(entName(k)), parts: [o.sum], o })), "ents", emax, r => fm(r.o.sum) + ' <span class="mut sm">· ' + r.o.n.size + "</span>") + "</div></section></div>";
     v.innerHTML = h;
@@ -128,9 +128,14 @@ const VIEWS = (() => {
   const SORTS = { "d-desc": ["الأحدث أولاً", (a, b) => a.d < b.d ? 1 : a.d > b.d ? -1 : 0], "d-asc": ["الأقدم أولاً", (a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : 0], "sum": ["الأعلى مستحقاً", (a, b) => b.sum - a.sum], "km": ["الأبعد مسافة", (a, b) => (b.km ?? -1) - (a.km ?? -1)], "n": ["الأكثر أفراداً", (a, b) => b.people.length - a.people.length] };
   let vObs = null;
   let VM = null;
-  function visitRow(x) {
-    const o = VM && VM.get(x) || { sum: x.sum, miss: x.miss, keys: null };
-    return '<tr><td data-l="اليوم">' + dateCell(x.d) + '</td><td data-l="الجهة" class="c-ent"><button class="lnk-t" data-f="ents" data-k="' + esc(x.ek) + '">' + esc(x.ent) + '</button><div class="mut sm">' + esc(x.type) + (x.rows.length > 1 ? " · " + x.rows.length + " صفوف" : "") + (x.zero ? " · بدون تكلفة" : "") + '</div></td><td data-l="المدينة">' + (x.city ? esc(x.city) + '<div class="mut sm">' + (x.city === DAMANHOUR ? "داخلي" : (x.km != null ? x.km + " كم" : "") + (x.far ? " · بدل سفر" : "")) + "</div>" + (x.how === "guess" || x.how === "fuzzy" ? '<span class="tag d" title="تم الاستنتاج من الاسم">تخمين</span>' : "") : '<button class="tag d" data-goset>غير معروفة · حدّدها</button>') + '</td><td data-l="الغرض"><button class="tag' + (x.cat === "plan" ? " w" : "") + '" data-f="purp" data-k="' + esc(x.pk) + '">' + esc(x.g || CAT[x.cat]) + '</button></td><td data-l="الأفراد"><div class="people">' + x.people.map(p => '<button class="pc' + (p.car ? " car" : "") + (o.keys && !o.keys.has(p.key) ? " dim" : "") + '" data-person="' + esc(p.key) + '" title="' + (p.car ? "بسيارة الهيئة" : "بدون سيارة") + (o.keys && !o.keys.has(p.key) ? " · خارج التصفية" : "") + '">' + (p.car ? icons.car : "") + esc(p.name) + "</button>").join("") + '</div></td><td class="n c-amt" data-l="المستحق">' + money(o.sum, o.miss) + "</td></tr>";
+  function legCell(x) {
+    return '<div class="leg"><button class="lnk-t" data-f="ents" data-k="' + esc(x.ek) + '">' + esc(x.ent) + '</button><div class="mut sm">' + (x.city ? esc(x.city) + (x.city === DAMANHOUR ? " · داخلي" : (x.km != null ? " · " + x.km + " كم" : "") + (x.far ? " · بدل سفر" : "")) : '<button class="tag d" data-goset>مدينة غير معروفة · حدّدها</button>') + " · " + esc(x.type) + (x.zero ? " · بدون تكلفة" : "") + (x.how === "guess" || x.how === "fuzzy" ? ' · <span class="tag d" title="تم الاستنتاج من الاسم">تخمين</span>' : "") + "</div></div>";
+  }
+  function visitRow(G) {
+    const o = VM && VM.get(G) || { sum: G.sum, miss: G.miss, keys: null, legs: null };
+    const legs = o.legs ? G.legs.filter(v => o.legs.has(v)) : G.legs;
+    const multi = G.legs.length > 1;
+    return '<tr' + (multi ? ' class="multi"' : "") + '><td data-l="اليوم">' + dateCell(G.d) + '</td><td data-l="الجهة" class="c-ent">' + (multi ? '<span class="legs-n">' + G.legs.length + " جهات · زيارة واحدة</span>" : "") + legs.map(legCell).join("") + (legs.length < G.legs.length ? '<div class="mut sm">+' + (G.legs.length - legs.length) + " خارج التصفية</div>" : "") + '</td><td data-l="الغرض"><button class="tag' + (G.cat === "plan" ? " w" : "") + '" data-f="purp" data-k="' + esc(G.pk) + '">' + esc(G.cat === "plan" ? "خطة المرور" : G.g || CAT[G.cat]) + '</button></td><td data-l="الأفراد"><div class="people">' + G.people.map(p => '<button class="pc' + (p.car ? " car" : "") + (o.keys && !o.keys.has(p.key) ? " dim" : "") + '" data-person="' + esc(p.key) + '" title="' + (p.car ? "بسيارة الهيئة" : "بدون سيارة") + (o.keys && !o.keys.has(p.key) ? " · خارج التصفية" : "") + '">' + (p.car ? icons.car : "") + esc(p.name) + "</button>").join("") + '</div></td><td class="n c-amt" data-l="المستحق">' + money(o.sum, o.miss) + "</td></tr>";
   }
   function visits(v) {
     const R = currentResult();
@@ -138,9 +143,9 @@ const VIEWS = (() => {
     const sort = SORTS[S.vsort] ? S.vsort : "d-desc";
     const list = sort === "sum" ? [...R.visits].sort((a, b) => R.vm.get(b).sum - R.vm.get(a).sum) : [...R.visits].sort(SORTS[sort][1]);
     let shown = Math.min(list.length, S.vlimit);
-    let h = '<section class="panel"><div class="panel-hd"><div><h2>الزيارات</h2><p>' + list.length + " زيارة · " + fm(R.total) + ' جنيه</p></div><span id="v-sort"></span></div>';
-    h += '<div class="tw"><table class="vt"><thead><tr><th>اليوم</th><th>جهة المرور</th><th>المدينة</th><th>الغرض</th><th>القائمون بالمرور</th><th class="n">المستحق</th></tr></thead><tbody>';
-    if (!list.length) h += '<tr><td colspan="6" class="empty">لا نتائج <button class="btn sm" data-clear-all>مسح التصفية</button></td></tr>';
+    let h = '<section class="panel"><div class="panel-hd"><div><h2>الزيارات</h2><p>' + list.length + " زيارة · " + R.items.length + " نشاط فردي · " + fm(R.total) + ' جنيه</p></div><span id="v-sort"></span></div><p class="note sm defn">' + icons.info + "<span><b>الزيارة</b>: خطة المرور لنفس الفريق في نفس اليوم = زيارة واحدة حتى لو تعددت الجهات والصفوف، وأي غرض آخر = كل صف زيارة. <b>النشاط الفردي</b>: مشاركة فرد واحد في صف واحد، وعليه يُحسب المبلغ والسيارة.</span></p>";
+    h += '<div class="tw"><table class="vt"><thead><tr><th>اليوم</th><th>جهة المرور والمدينة</th><th>الغرض</th><th>القائمون بالمرور</th><th class="n">المستحق</th></tr></thead><tbody>';
+    if (!list.length) h += '<tr><td colspan="5" class="empty">لا نتائج <button class="btn sm" data-clear-all>مسح التصفية</button></td></tr>';
     h += list.slice(0, shown).map(visitRow).join("");
     h += '</tbody></table></div><div class="more" id="v-more">' + (list.length > shown ? '<span class="mut sm">' + shown + " من " + list.length + "</span>" : "") + "</div></section>";
     v.innerHTML = h;
@@ -179,19 +184,19 @@ const VIEWS = (() => {
         rows += '<tr class="' + (i === 0 ? "first" : "cont") + (it.p.car ? " carline" : "") + (out ? " out" : "") + '">' + (i === 0 ? '<td rowspan="' + it.ls.length + '" class="sd"><div class="sd-in">' + exBox(it) + "<div>" + UI.dlabel(it.v.d) + '<span class="mut sm">' + UI.wday(it.v.d) + " · " + esc(it.v.g || CAT[it.v.cat]) + "</span></div></div></td>" : "") + '<td class="st">' + esc(l.t) + (l.ex ? ' <span class="tag d">استثناء</span>' : "") + '</td><td class="mut sm">' + esc(l.note || "") + '</td><td class="n">' + amt(l.a) + "</td></tr>";
       });
     }
-    return '<div class="tw"><table class="statement"><thead><tr><th>التاريخ</th><th>البيان</th><th>التفصيل</th><th class="n">المبلغ</th></tr></thead><tbody>' + rows + '<tr class="sumrow"><td colspan="3">الإجمالي · ' + P.items.length + " زيارة · " + n + " بند" + (P.miss ? ' · <span class="nil">' + P.miss + " بلا سعر</span>" : "") + '</td><td class="n">' + fm(P.sum) + "</td></tr></tbody></table></div>";
+    return '<div class="tw"><table class="statement"><thead><tr><th>التاريخ</th><th>البيان</th><th>التفصيل</th><th class="n">المبلغ</th></tr></thead><tbody>' + rows + '<tr class="sumrow"><td colspan="3">الإجمالي · ' + P.visits + " زيارة · " + P.items.length + " نشاط · " + n + " بند" + (P.miss ? ' · <span class="nil">' + P.miss + " بلا سعر</span>" : "") + '</td><td class="n">' + fm(P.sum) + "</td></tr></tbody></table></div>";
   }
 
   function ledger(P, R) {
     const items = withExcluded(P, R);
-    return '<div class="tw"><table class="ledger"><thead><tr><th>اليوم</th><th>جهة المرور</th><th>الغرض</th><th>البنود</th><th class="n">المبلغ</th></tr></thead><tbody>' + items.map(it => '<tr class="' + (S.excl.includes(it.id) ? "out" : "") + '"><td><div class="sd-in">' + exBox(it) + dateCell(it.v.d) + "</div></td><td><b>" + esc(it.v.ent) + '</b><div class="mut sm">' + esc(it.v.city || "مدينة غير معروفة") + (it.v.people.length > 1 ? " · مع " + it.v.people.filter(p => p.key !== P.key).map(p => esc(p.name)).join("، ") : "") + '</div></td><td><span class="tag' + (it.v.cat === "plan" ? " w" : "") + '">' + esc(it.v.g || CAT[it.v.cat]) + "</span>" + (it.p.car ? ' <span class="tag o">' + icons.car + " سيارة</span>" : "") + '</td><td><div class="ln-list">' + it.ls.map(l => '<div class="ln"><span>' + esc(l.t) + "</span><span>" + amt(l.a) + "</span></div>").join("") + '</div></td><td class="n"><b>' + money(it.sum, it.miss) + "</b></td></tr>").join("") + '<tr class="sumrow"><td colspan="4">الإجمالي · ' + P.items.length + ' زيارة</td><td class="n">' + fm(P.sum) + "</td></tr></tbody></table></div>";
+    return '<div class="tw"><table class="ledger"><thead><tr><th>اليوم</th><th>جهة المرور</th><th>الغرض</th><th>البنود</th><th class="n">المبلغ</th></tr></thead><tbody>' + items.map(it => '<tr class="' + (S.excl.includes(it.id) ? "out" : "") + '"><td><div class="sd-in">' + exBox(it) + dateCell(it.v.d) + "</div></td><td><b>" + esc(it.v.ent) + '</b><div class="mut sm">' + esc(it.v.city || "مدينة غير معروفة") + (it.v.people.length > 1 ? " · مع " + it.v.people.filter(p => p.key !== P.key).map(p => esc(p.name)).join("، ") : "") + '</div></td><td><span class="tag' + (it.v.cat === "plan" ? " w" : "") + '">' + esc(it.v.g || CAT[it.v.cat]) + "</span>" + (it.p.car ? ' <span class="tag o">' + icons.car + " سيارة</span>" : "") + '</td><td><div class="ln-list">' + it.ls.map(l => '<div class="ln"><span>' + esc(l.t) + "</span><span>" + amt(l.a) + "</span></div>").join("") + '</div></td><td class="n"><b>' + money(it.sum, it.miss) + "</b></td></tr>").join("") + '<tr class="sumrow"><td colspan="4">الإجمالي · ' + P.visits + ' زيارة · ' + P.items.length + ' نشاط</td><td class="n">' + fm(P.sum) + "</td></tr></tbody></table></div>";
   }
 
   function personHead(P) {
-    return '<div class="ph"><div class="who"><div class="avatar">' + esc(P.name.trim().charAt(0)) + '</div><div><h2>' + esc(P.name) + '</h2><div class="row" style="margin-top:6px"><span data-cls-slot="' + esc(P.key) + '"></span></div></div></div><div class="row tags"><span class="tag">' + P.items.length + ' زيارة</span><span class="tag">' + P.plan + " خطة · " + P.insp + ' فحص</span><span class="tag">' + P.car + ' بالسيارة</span>' + (P.zero ? '<span class="tag o">' + P.zero + " بلا مبلغ</span>" : "") + '<span class="tag o">' + fm(P.km) + ' كم</span><span class="tag o">انتقال ' + fm(P.k.travel) + '</span><span class="tag o">بدل سفر ' + fm(P.k.allow) + '</span></div><div class="tot"><span class="mut sm">الإجمالي</span><b>' + fm(P.sum) + "</b>" + (P.miss ? '<span class="nil">' + P.miss + " بلا سعر</span>" : '<span class="mut sm">جنيه</span>') + "</div></div>";
+    return '<div class="ph"><div class="who"><div class="avatar">' + esc(P.name.trim().charAt(0)) + '</div><div><h2>' + esc(P.name) + '</h2><div class="row" style="margin-top:6px"><span data-cls-slot="' + esc(P.key) + '"></span></div></div></div><div class="row tags"><span class="tag">' + P.visits + ' زيارة · ' + P.items.length + ' نشاط</span><span class="tag">' + P.plan + " خطة · " + P.insp + ' فحص</span><span class="tag">' + P.car + ' نشاط بالسيارة</span>' + (P.save > 0 ? '<span class="tag sv">وفّرت السيارة ' + fm(P.save) + '</span>' : "") + (P.zero ? '<span class="tag o">' + P.zero + " بلا مبلغ</span>" : "") + '<span class="tag o">' + fm(P.km) + ' كم</span><span class="tag o">انتقال ' + fm(P.k.travel) + '</span><span class="tag o">بدل سفر ' + fm(P.k.allow) + '</span></div><div class="tot"><span class="mut sm">الإجمالي</span><b>' + fm(P.sum) + "</b>" + (P.miss ? '<span class="nil">' + P.miss + " بلا سعر</span>" : '<span class="mut sm">جنيه</span>') + "</div></div>";
   }
 
-  const PSORT = { sum: p => p.sum, name: p => p.name, n: p => p.items.length, car: p => p.car, zero: p => p.zero, travel: p => p.k.travel, class: p => p.k.class, service: p => p.k.service, allow: p => p.k.allow, km: p => p.km };
+  const PSORT = { sum: p => p.sum, name: p => p.name, v: p => p.visits, save: p => p.save, n: p => p.items.length, car: p => p.car, zero: p => p.zero, travel: p => p.k.travel, class: p => p.k.class, service: p => p.k.service, allow: p => p.k.allow, km: p => p.km };
   let psort = { k: "sum", dir: -1 };
   const z = n => n ? fm(n) : '<i class="zdot">·</i>';
 
@@ -211,9 +216,9 @@ const VIEWS = (() => {
       const list = [...ps].sort((a, b) => { const x = get(a), y = get(b); return (typeof x === "string" ? x.localeCompare(y, "ar") : x - y) * psort.dir; });
       const th = (k, l, n) => '<th class="' + (n ? "n " : "") + 'sortable' + (psort.k === k ? " on" : "") + '" data-ps="' + k + '" aria-sort="' + (psort.k === k ? (psort.dir > 0 ? "ascending" : "descending") : "none") + '">' + l + (psort.k === k ? '<i class="sd-ar">' + (psort.dir > 0 ? "▲" : "▼") + "</i>" : "") + "</th>";
       const sumK = k => ps.reduce((s, p) => s + p.k[k], 0);
-      h += '<section class="panel"><div class="panel-hd"><div><h2>الأفراد</h2><p>' + ps.length + " فرد · " + R.items.length + " مشاركة · " + fm(tot) + ' جنيه</p></div></div><div class="tw"><table class="ptbl"><thead><tr>' + th("name", "الاسم") + "<th>الدرجة</th>" + th("n", "زيارات", 1) + th("car", "بالسيارة", 1) + th("zero", "بلا مبلغ", 1) + th("travel", "انتقال", 1) + th("class", "داخلي", 1) + th("service", "سيرفيس", 1) + th("allow", "بدل سفر", 1) + th("km", "كم", 1) + th("sum", "الإجمالي", 1) + "</tr></thead><tbody>" +
-        list.map(p => '<tr><td><button class="lnk-t" data-go="' + esc(p.key) + '">' + esc(p.name) + "</button></td><td>" + CLS_S[p.cls] + '</td><td class="n">' + p.items.length + '</td><td class="n">' + p.car + '</td><td class="n">' + z(p.zero) + '</td><td class="n">' + z(p.k.travel) + '</td><td class="n">' + z(p.k.class) + '</td><td class="n">' + z(p.k.service) + '</td><td class="n">' + z(p.k.allow) + '</td><td class="n mut">' + z(p.km) + '</td><td class="n"><b>' + money(p.sum, p.miss) + "</b></td></tr>").join("") +
-        '<tr class="sumrow"><td colspan="2">الإجمالي</td><td class="n">' + R.items.length + '</td><td class="n">' + ps.reduce((s, p) => s + p.car, 0) + '</td><td class="n">' + ps.reduce((s, p) => s + p.zero, 0) + '</td><td class="n">' + fm(sumK("travel")) + '</td><td class="n">' + fm(sumK("class")) + '</td><td class="n">' + fm(sumK("service")) + '</td><td class="n">' + fm(sumK("allow")) + '</td><td class="n">' + fm(ps.reduce((s, p) => s + p.km, 0)) + '</td><td class="n">' + fm(tot) + "</td></tr></tbody></table></div></section>";
+      h += '<section class="panel"><div class="panel-hd"><div><h2>الأفراد</h2><p>' + ps.length + " فرد · " + R.visits.length + " زيارة · " + R.items.length + " نشاط فردي · " + fm(tot) + ' جنيه</p></div></div><div class="tw"><table class="ptbl"><thead><tr>' + th("name", "الاسم") + "<th>الدرجة</th>" + th("v", "زيارات", 1) + th("n", "أنشطة", 1) + th("car", "بالسيارة", 1) + th("save", "وفّرته السيارة", 1) + th("zero", "بلا مبلغ", 1) + th("travel", "انتقال", 1) + th("class", "داخلي", 1) + th("service", "سيرفيس", 1) + th("allow", "بدل سفر", 1) + th("km", "كم", 1) + th("sum", "الإجمالي", 1) + "</tr></thead><tbody>" +
+        list.map(p => '<tr><td><button class="lnk-t" data-go="' + esc(p.key) + '">' + esc(p.name) + "</button></td><td>" + CLS_S[p.cls] + '</td><td class="n">' + p.visits + '</td><td class="n">' + p.items.length + '</td><td class="n">' + p.car + '</td><td class="n sv">' + z(Math.round(p.save)) + '</td><td class="n">' + z(p.zero) + '</td><td class="n">' + z(p.k.travel) + '</td><td class="n">' + z(p.k.class) + '</td><td class="n">' + z(p.k.service) + '</td><td class="n">' + z(p.k.allow) + '</td><td class="n mut">' + z(p.km) + '</td><td class="n"><b>' + money(p.sum, p.miss) + "</b></td></tr>").join("") +
+        '<tr class="sumrow"><td colspan="2">الإجمالي</td><td class="n">' + R.visits.length + '</td><td class="n">' + R.items.length + '</td><td class="n">' + ps.reduce((s, p) => s + p.car, 0) + '</td><td class="n">' + fm(Math.round(ps.reduce((s, p) => s + p.save, 0))) + '</td><td class="n">' + ps.reduce((s, p) => s + p.zero, 0) + '</td><td class="n">' + fm(sumK("travel")) + '</td><td class="n">' + fm(sumK("class")) + '</td><td class="n">' + fm(sumK("service")) + '</td><td class="n">' + fm(sumK("allow")) + '</td><td class="n">' + fm(ps.reduce((s, p) => s + p.km, 0)) + '</td><td class="n">' + fm(tot) + "</td></tr></tbody></table></div></section>";
     } else {
       const list = ps.slice(0, S.sheetCap || SHEET_CAP);
       for (const P of list) h += '<section class="panel person-sheet">' + personHead(P) + (pv === "ledger" ? ledger(P, R) : statement(P, R)) + "</section>";

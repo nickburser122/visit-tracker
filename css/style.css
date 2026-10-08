@@ -662,8 +662,7 @@ body.dragging::after{content:"أفلت الملف للاستيراد";position:f
   .vt td[data-l="اليوم"]{grid-row:1/3}
   .vt td.c-ent{grid-column:2}
   .vt td.c-amt{grid-column:3;grid-row:1;font-weight:500}
-  .vt td[data-l="المدينة"]{grid-column:2;display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;font-size:13px}
-  .vt td[data-l="المدينة"] .mut{display:inline}
+  .vt td.c-ent{grid-row:1/3}
   .vt td[data-l="الغرض"]{grid-column:3;grid-row:2;text-align:end}
   .vt td[data-l="الأفراد"]{grid-column:1/-1;padding-top:4px}
   .vt tbody tr:hover td{background:none}
@@ -883,7 +882,8 @@ button.tag:hover{filter:brightness(.96)}
 .a-car-r i{position:absolute;bottom:0;inset-inline-start:0;height:2.2pt;width:var(--w);background:#9fbcae;border-radius:2pt}
 .a-car-r div:first-child i{background:#626a9e}
 .a-fn{margin:5px 0 0;font-size:7.8pt;color:#666;line-height:1.55}
-.a-tbl td{padding:3.4px 7px}
+.a-tbl td{padding:3.4px 6px}
+.a-tbl th{padding:5px 6px}
 .a-tbl th.a-bc{width:70px}
 .a-tbl th.a-vh{white-space:normal;max-width:70px;line-height:1.25;font-size:7.6pt}
 .a-bar{display:block;height:5pt;background:#ecedf3;border-radius:3pt;overflow:hidden}
@@ -901,4 +901,33 @@ button.tag:hover{filter:brightness(.96)}
 .a-cost-k span{display:block;font-size:7.6pt;color:#7a5a45}
 .a-cost-k b{font-size:10pt;font-weight:500}
 .a-cost-k small{font-size:7.4pt;color:#999;margin-inline-start:4px}
+.a-defs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.a-defs div{background:#f4f4f8;border-radius:6px;padding:5px 9px;font-size:7.8pt;color:#555;line-height:1.5}
+.a-defs b{display:block;font-size:8.6pt;color:#1d2030;font-weight:600}
+.a-cost-hd{padding:6px 11px}
+.a-cost-hd h3{margin-bottom:2px}
+.a-cost-hd .a-fn{margin-top:0}
+.a-cost-hd .a-fn b{font-weight:600;color:#3a2a20}
+.a-save{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.a-save div{background:#fff;border:.6pt solid #e2d2c6;border-radius:6px;padding:5px 9px}
+.a-save span{display:block;font-size:7.6pt;color:#7a5a45}
+.a-save b{font-size:11pt;font-weight:600}
+.a-save small{display:block;font-size:7pt;color:#7a8f84}
+.a-save .hl{background:#eef4f0;border-color:#b9cfc3}
+.a-save .hl span{color:#4d7262}
+.a-save .hl b{color:#2f5345}
+.a-cost-t h3::before{background:#b5876b}
+.a-bar.clay i{background:#c9a28a}
+.a-bar.sage i{background:#8fb3a2}
+.a-neg{color:#a8473a}
+.a-fn2{font-weight:400!important;font-size:7.4pt;color:#777}
+.a-sec h4 .lnk,.rp-sec h4 .lnk{font-size:11px;padding:0 6px;margin-inline-start:6px;text-transform:none;letter-spacing:0}
+.vt .leg+.leg{margin-top:6px;padding-top:6px;border-top:1px dashed var(--ln2)}
+.legs-n{display:inline-block;font-size:11px;color:var(--acc-ink);background:var(--acc-bg);border-radius:999px;padding:0 9px;margin-bottom:5px}
+.vt tr.multi td{background:color-mix(in srgb,var(--acc-bg) 35%,transparent)}
+.defn{display:flex;gap:8px;align-items:flex-start;margin:-6px 0 12px;padding:9px 12px;border-radius:var(--r-md);background:var(--pn2);color:var(--mk2);line-height:1.7}
+.defn svg{flex:none;margin-top:4px;color:var(--acc-ink)}
+.defn b{font-weight:500;color:var(--mk)}
+.tag.sv,td.sv{color:var(--sage-ink)}
+.tag.sv{background:var(--sage-bg)}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}}

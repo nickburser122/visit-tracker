@@ -171,7 +171,7 @@ const IO = (() => {
     if (sets.length) saveSettings();
     if (!picked.length) { rebuild(); render(); UI.toast("✓ " + sets.length + " قائمة"); return; }
     const incoming = picked.flatMap(r => r.rows);
-    const merged = ENG.mergeRows(mode === "append" ? [...S.raw, ...incoming] : incoming);
+    const merged = ENG.mergeRows(mode === "append" ? S.raw : [], incoming);
     S.raw = merged.rows;
     S.file = mode === "append" && snap.file ? snap.file + " + " + file : file;
     S.sheet = picked.map(r => r.name).join("، ");
@@ -199,7 +199,10 @@ const IO = (() => {
       const n = rnd() < .25 ? 0 : rnd() < .7 ? 1 : 2;
       for (let i = 0; i < n; i++) {
         const team = [...new Set([pick(ppl), pick(ppl), rnd() < .4 ? pick(ppl) : ""].filter(Boolean))];
-        rows.push({ d: d.toISOString().slice(0, 10), ent: pick(ents), g: rnd() < .62 ? "خطة المرور" : rnd() < .85 ? "فحص" : "شكوى", car: rnd() < .33, people: team, src: "تجريبي:" + (rows.length + 2) });
+        const g = rnd() < .62 ? "خطة المرور" : rnd() < .8 ? "فحص" : rnd() < .6 ? "شكوى" : "لجنة";
+        const day = d.toISOString().slice(0, 10), car = rnd() < .33;
+        rows.push({ d: day, ent: pick(ents), g, car, people: team, src: "تجريبي:" + (rows.length + 2) });
+        if (g === "خطة المرور" && rnd() < .35) rows.push({ d: day, ent: pick(ents), g, car: car && rnd() < .7, people: team, src: "تجريبي:" + (rows.length + 2) });
       }
     }
     commit([{ name: "بيانات تجريبية", rows }], "بيانات تجريبية", [], "replace");

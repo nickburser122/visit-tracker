@@ -299,14 +299,12 @@ const ENG = (() => {
     return [...Array(width).keys()].map(i => ({ i, l: L(i) + (head[i] != null && head[i] !== "" ? " · " + String(head[i]).trim().slice(0, 28) : "") }));
   }
 
-  function mergeRows(list) {
-    const seen = new Set(), out = [];
+  function mergeRows(base, incoming) {
+    const key = r => r.d + "|" + NZ(r.ent) + "|" + NZ(r.g) + "|" + r.people.map(personKey).sort().join(",");
+    const seen = new Set(base.map(key));
+    const out = [...base];
     let dup = 0;
-    for (const r of list) {
-      const k = r.d + "|" + NZ(r.ent) + "|" + NZ(r.g) + "|" + r.people.map(personKey).sort().join(",");
-      if (seen.has(k)) { dup++; continue; }
-      seen.add(k); out.push(r);
-    }
+    for (const r of incoming) { if (seen.has(key(r))) { dup++; continue; } out.push(r); }
     return { rows: out, dup };
   }
 
@@ -460,11 +458,12 @@ const ENG = (() => {
     ZS = zeroSet();
     const pk = {};
     for (const k of Object.keys(st.people)) pk[personKey(k)] = k;
-    const map = new Map();
+    const map = new Map(), seen = new Map();
     for (const r of raw) {
       const cat = purposeCat(r.g);
       const ek = NZ(r.ent);
-      const key = r.d + "|" + ek + "|" + (cat === "other" ? NZ(r.g) : cat);
+      let key = r.d + "|" + ek + "|" + (cat === "plan" ? cat : NZ(r.g) || cat);
+      const n = (seen.get(key) || 0) + 1; seen.set(key, n); if (n > 1) key += "#" + n;
       let v = map.get(key);
       if (!v) {
         const rc = resolver(r.ent);
@@ -481,14 +480,21 @@ const ENG = (() => {
         else { const sp = st.people[k] || { name: n, cls: st.defaultClass }; v.parts.set(k, { key: k, name: sp.name, cls: sp.cls, car }); }
       }
     }
-    const visits = [...map.values()].sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : a.ent.localeCompare(b.ent, "ar"));
+    const legs = [...map.values()].sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : a.ent.localeCompare(b.ent, "ar"));
     const items = [];
     const meta = { months: {}, people: {}, cities: {}, types: {}, ents: {}, bands: {}, purp: {}, unknown: {}, days: {} };
     const inc = (o, k, l) => { const x = o[k] || (o[k] = { n: 0, l: l == null ? k : l }); x.n++; };
-    visits.forEach((v, i) => {
+    const gmap = new Map();
+    legs.forEach((v, i) => {
       v.i = i;
       v.people = [...v.parts.values()];
       delete v.parts;
+      const team = v.people.map(p => p.key).sort().join(",");
+      const gk = v.cat === "plan" ? v.d + "|plan|" + team : "r|" + v.id;
+      let G = gmap.get(gk);
+      if (!G) gmap.set(gk, G = { id: gk, d: v.d, m: v.m, cat: v.cat, pk: v.pk, g: v.g, legs: [] });
+      G.legs.push(v);
+      v.V = G;
       v.carN = v.people.filter(p => p.car).length;
       v.mode = v.carN === 0 ? "nocar" : v.carN === v.people.length ? "car" : "mixed";
       v.km = kmOf(v.city);
@@ -502,21 +508,39 @@ const ENG = (() => {
         let sum = 0, miss = 0;
         const k = { travel: 0, class: 0, service: 0, allow: 0 };
         for (const l of ls) { if (l.a == null) miss++; else { sum += l.a; if (l.kind in k) k[l.kind] += l.a; } }
-        items.push({ id: v.id + "|" + p.key, v, p, ls, sum, miss, k });
+        const alt = p.car ? nocarCost(v, p) : (miss ? null : sum);
+        items.push({ id: v.id + "|" + p.key, v, p, ls, sum, miss, k, alt, save: p.car && alt != null ? alt - sum : 0 });
         v.sum += sum; v.miss += miss;
         inc(meta.people, p.key, p.name);
       }
-      meta.days[v.d] = (meta.days[v.d] || 0) + 1;
-      inc(meta.months, v.m);
       inc(meta.cities, v.city || "?", v.city || "غير معروفة");
       inc(meta.types, v.type);
       inc(meta.ents, v.ek, v.ent);
       inc(meta.bands, v.band, bandLabel(v.band));
-      inc(meta.purp, v.pk, purposeLabel(v.pk, v.g));
-      meta.purp[v.pk].cat = v.cat;
       if (!v.city || v.how === "guess" || v.how === "fuzzy") { inc(meta.unknown, v.ek, v.ent); meta.unknown[v.ek].how = v.how; meta.unknown[v.ek].city = v.city; }
     });
-    M.visits = visits; M.items = items; M.meta = meta;
+    const visits = [...gmap.values()].sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : a.legs[0].ent.localeCompare(b.legs[0].ent, "ar"));
+    visits.forEach((G, i) => {
+      G.i = i;
+      const pm = new Map();
+      for (const v of G.legs) for (const p of v.people) { const x = pm.get(p.key); if (x) x.car = x.car && p.car; else pm.set(p.key, { ...p }); }
+      G.people = [...pm.values()];
+      G.carN = G.people.filter(p => p.car).length;
+      G.mode = G.carN === 0 ? "nocar" : G.carN === G.people.length ? "car" : "mixed";
+      G.km = Math.max(-1, ...G.legs.map(v => v.km ?? -1));
+      if (G.km < 0) G.km = null;
+      G.inD = G.legs.every(v => v.city === DAMANHOUR);
+      G.rows = G.legs.reduce((s, v) => s + v.rows.length, 0);
+      G.sum = G.legs.reduce((s, v) => s + v.sum, 0);
+      G.miss = G.legs.reduce((s, v) => s + v.miss, 0);
+      meta.days[G.d] = (meta.days[G.d] || 0) + 1;
+      inc(meta.months, G.m);
+      inc(meta.purp, G.pk, purposeLabel(G.pk, G.g));
+      meta.purp[G.pk].cat = G.cat;
+      G.ents = [...new Set(G.legs.map(v => v.ent))];
+      G.cities = [...new Set(G.legs.map(v => v.city || "?"))];
+    });
+    M.legs = legs; M.visits = visits; M.items = items; M.meta = meta;
     return M;
   }
 
@@ -560,28 +584,31 @@ const ENG = (() => {
       if (!ok) continue;
       if (excl && excl.has(it.id)) { excluded.push(it); continue; }
       items.push(it);
-      let o = vm.get(v);
-      if (!o) vm.set(v, o = { sum: 0, miss: 0, keys: new Set() });
-      o.sum += it.sum; o.miss += it.miss; o.keys.add(it.p.key);
+      let o = vm.get(v.V);
+      if (!o) vm.set(v.V, o = { sum: 0, miss: 0, keys: new Set(), legs: new Set(), n: 0, car: 0 });
+      o.sum += it.sum; o.miss += it.miss; o.keys.add(it.p.key); o.legs.add(v); o.n++; if (it.p.car) o.car++;
     }
-    const visits = [...vm.keys()];
+    const visits = [...vm.keys()].sort((a, b) => a.i - b.i);
+    const legs = [...new Set(items.map(it => it.v))];
     const pm = new Map();
     for (const it of items) {
       let o = pm.get(it.p.key);
-      if (!o) pm.set(it.p.key, o = { key: it.p.key, name: it.p.name, cls: it.p.cls, items: [], sum: 0, miss: 0, car: 0, nocar: 0, zero: 0, plan: 0, insp: 0, other: 0, km: 0, far: 0, k: { travel: 0, class: 0, service: 0, allow: 0 } });
+      if (!o) pm.set(it.p.key, o = { key: it.p.key, name: it.p.name, cls: it.p.cls, items: [], vset: new Set(), visits: 0, sum: 0, miss: 0, car: 0, nocar: 0, zero: 0, plan: 0, insp: 0, other: 0, km: 0, far: 0, carSum: 0, alt: 0, save: 0, altMiss: 0, k: { travel: 0, class: 0, service: 0, allow: 0 } });
       o.items.push(it);
+      if (!o.vset.has(it.v.V)) { o.vset.add(it.v.V); o[it.v.cat]++; }
+      if (it.p.car) { o.carSum += it.sum; if (it.alt == null) o.altMiss++; else { o.alt += it.alt; o.save += it.save; } }
       o.sum += it.sum; o.miss += it.miss;
       if (!it.miss && it.sum === 0) o.zero++;
       o[it.p.car ? "car" : "nocar"]++;
-      o[it.v.cat]++;
       o.km += (it.v.km || 0) * 2;
       if (it.v.band === "far" && it.p.car) o.far++;
       for (const k in it.k) o.k[k] += it.k[k];
     }
+    for (const o of pm.values()) o.visits = o.vset.size;
     const persons = [...pm.values()].sort((a, b) => b.sum - a.sum || b.items.length - a.items.length);
     let total = 0, miss = 0;
     for (const it of items) { total += it.sum; miss += it.miss; }
-    return { visits, items, persons, total, miss, vm, excluded };
+    return { visits, legs, items, persons, total, miss, vm, excluded };
   }
 
   const FACETS = {
@@ -606,7 +633,7 @@ const ENG = (() => {
     for (const k of FACET_KEYS) sel[k] = f[k] && f[k].length ? new Set(f[k]) : null;
     const out = {};
     for (const k of FACET_KEYS) out[k] = new Map();
-    const add = (k, vals, v) => { const m = out[k]; for (const x of Array.isArray(vals) ? vals : [vals]) { let s = m.get(x); if (!s) m.set(x, s = new Set()); s.add(v); } };
+    const add = (k, vals, V) => { const m = out[k]; for (const x of Array.isArray(vals) ? vals : [vals]) { let s = m.get(x); if (!s) m.set(x, s = new Set()); s.add(V); } };
     for (const it of M.items) {
       const v = it.v;
       if (pt && !pt(v)) continue;
@@ -622,8 +649,8 @@ const ENG = (() => {
         if (!ok) { n++; miss = k; if (n > 1) break; }
       }
       if (n > 1) continue;
-      if (n === 1) add(miss, vals[miss], v);
-      else for (const k of FACET_KEYS) add(k, vals[k], v);
+      if (n === 1) add(miss, vals[miss], v.V);
+      else for (const k of FACET_KEYS) add(k, vals[k], v.V);
     }
     const res = {};
     for (const k of FACET_KEYS) { res[k] = {}; for (const [x, s] of out[k]) res[k][x] = s.size; }

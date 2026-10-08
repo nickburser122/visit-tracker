@@ -2,7 +2,21 @@
 
 Works out travel allowances (بدلات المرور) from the inspection-visits Excel sheet and produces visit-activity reports. Plain JS, no libraries, runs entirely in the browser.
 
-## What's new
+## Counting model
+- **Activity (نشاط فردي):** one person on one sheet row. Every row produces one activity per person in it, even when the place, day and purpose repeat. Amounts, car use and exclusions are tracked per activity.
+- **Visit (زيارة):**
+  - `خطة المرور` rows for the **same team on the same day** form one visit, even across several entities or rows.
+  - Any other purpose: every row is its own visit.
+  - Car use stays per activity. A visit is "mixed" when only part of the team or part of its rows used the car.
+- **Saving by car:** the cost of a car activity if it had been done without the car (travel × 2 plus the internal allowance), minus its actual cost. This is precomputed per activity as `alt` and `save`.
+
+## Report cost sections (all marked "بالأسعار الحالية", for transparency only)
+- **ملخص التكلفة والتوفير:** total, breakdown, cost of car vs no-car activities, the cost if no car had been used, and the total saved.
+- **تكلفة كل فرد:** per-person cost split by allowance type, share of the total, and average per activity.
+- **الأكثر استخداماً للسيارة:** people ranked by car activities, with their actual cost, cost without the car, saving, and saving per activity.
+- Optional: cost by purpose, cost by month, and the table of prices used.
+
+## What's new (v3)
 - **Calm palette (iris · clay · sage):** low-chroma muted periwinkle as the single accent, with warm clay for "no car" and cost notes and soft sage for "by car". Light mode uses cool paper; dark mode uses soft slate. Every accent is a CSS variable (`--v1/--v2/--v3`, `--acc*`, `--clay-*`, `--sage-*`) in `css/style.css`.
 - **Unified filter board:** replaces the people tabs and the lenses. Every category appears as a row of chips: الغرض · الانتقال · النطاق · الأفراد · المبلغ · نوع البند · نوع الجهة · المسافة · المدينة · الجهة.
   - Within a group, picks combine as **any of** (OR). Across groups they combine as **all of** (AND). You can pick one category, several, or some of each.
