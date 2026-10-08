@@ -1,0 +1,5 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"><title>goto history</title></head><body><script>
+/* Opens the real app on the History tab with revisit timing preset to "about every 2 months" (Arabic with #ar). */
+try{var ix=JSON.parse(localStorage.getItem('mauvine.v2.index')||'{"list":[],"prefs":{}}');ix.prefs=ix.prefs||{};ix.prefs.lang=location.hash==='#ar'?'ar':(ix.prefs.lang||'en');localStorage.setItem('mauvine.v2.index',JSON.stringify(ix))}catch(e){}
+location.replace('../index.html#history');
+</script></body></html>

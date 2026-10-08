@@ -1,0 +1,24 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"><title>goal UI check</title><style>iframe{width:1200px;height:900px;border:0}</style></head><body>
+<pre id="out"></pre>
+<iframe id="fr" src="../index.html#plan"></iframe>
+<script>
+var fr=document.getElementById('fr'),out=[];function log(s){out.push(s);console.log(s);document.getElementById('out').textContent=out.join('\n')}
+fr.onload=function(){var tries=0;(function wait(){var w=fr.contentWindow,A=w.APP,d=w.document;
+  if(!A||!A.ws||!A.ws.sites.length||A.ws.template!=='dataset'){if(tries++<80)return setTimeout(wait,250);return log('no dataset')}
+  var n0=A.ws.goals.length;
+  ['person','pair','classes','weekly','places','inject','pick'].forEach(function(k){
+    var b=d.querySelector('[data-bind="goalAdd"]');b.click();
+    var opts=Array.from(d.querySelectorAll('.ddpop .ddopt'));var i=['blank','person','pair','classes','weekly','places','inject','pick'].indexOf(k);opts[i].click();
+  });
+  log('added '+(A.ws.goals.length-n0)+' goals via dropdown, kinds='+A.ws.goals.slice(n0).map(function(g){return g.kind+'/'+g.per}).join(','));
+  var g=A.ws.goals[A.ws.goals.length-7];
+  d.querySelector('[data-gid="'+g.id+'"] [data-act="goalHard"]').click();log('lock toggled: '+A.ws.goals.find(function(x){return x.id===g.id}).hard);
+  var addv=d.querySelector('[data-gid="'+g.id+'"] [data-bind="goalAddV"]');if(addv){addv.click();var o=d.querySelector('.ddpop .ddopt');if(o)o.click()}
+  log('who values after add: '+JSON.stringify(A.ws.goals.find(function(x){return x.id===g.id}).who.v));
+  var per=d.querySelector('[data-gid="'+g.id+'"] [data-act="goalPeriod"][data-v="week"]');per.click();log('period: '+A.ws.goals.find(function(x){return x.id===g.id}).period);
+  var M=w.MV,C=M.compile(A.ws);log('compile ok: V='+C.P.V+' goals='+C.P.goals.length+' warn='+JSON.stringify(C.warn.map(function(x){return x.k})));
+  var r=w.MauvineEngine.solve(Object.assign({},C.P,{iters:20000,runs:1}));log('solve ok cost='+r.cost.toFixed(1)+' goalRes='+JSON.stringify(r.stats.goalRes));
+  w.location.hash='people';
+  setTimeout(function(){var dr=d.querySelector('[data-act="drawer"]');dr.click();setTimeout(function(){log('person goals section: '+!!d.querySelector('[data-act="goalForPerson"]'));log('DONE')},300)},300);
+})()};
+</script></body></html>

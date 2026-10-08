@@ -1,0 +1,4 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"><title>goto</title></head><body><script>
+var q=new URLSearchParams(location.search);var v=q.get('v')||'model';if(q.get('lang')){try{var ix=JSON.parse(localStorage.getItem('mauvine.v2.index')||'{"list":[],"prefs":{}}');ix.prefs=ix.prefs||{};ix.prefs.lang=q.get('lang');ix.prefs.theme=q.get('theme')||'light';localStorage.setItem('mauvine.v2.index',JSON.stringify(ix))}catch(e){}}
+location.replace('../index.html#'+v);
+</script></body></html>

@@ -1,0 +1,1975 @@
+{
+  "location_distances_km": {
+    "دمنهور": 0,
+    "شرنوب": 12,
+    "البيضا": 18,
+    "ابو حمص": 22,
+    "الدلنجات": 25,
+    "قليشان": 25,
+    "ايتاي": 26,
+    "المحمودية": 27,
+    "شبراخيت": 29,
+    "حوش عيسي": 35,
+    "كفر الدوار": 37,
+    "ابو المطامير": 38,
+    "الرحمانية": 40,
+    "كوم حمادة": 45,
+    "ادكو": 50,
+    "كفر الشيخ": 57,
+    "بدر": 76,
+    "اسكندرية": 64,
+    "النوبارية": 65,
+    "رشيد": 66,
+    "ادفينا": 70,
+    "وادي النطرون": 82,
+    "شبين الكوم": 86,
+    "القاهرة": 163
+  },
+  "categories": {
+    "basic": [
+      "ادارة الفرع",
+      "الاولي",
+      "الثانية",
+      "الثالثة"
+    ],
+    "contracted": [
+      "معمل",
+      "غسيل كلوي",
+      "اشعة",
+      "صيدلية",
+      "رسم عصب",
+      "مستشفي",
+      "حضانات"
+    ],
+    "excluded": [
+      "اخري",
+      "الرقابة الادارية",
+      "نيابة"
+    ],
+    "excluded_by_name_pattern": [
+      "مدارس"
+    ]
+  },
+  "facility_criticality": {
+    "هيئة التأمين الصحي": 0,
+    "المحافظة": 0,
+    "سنترال دمنهور": 0,
+    "لجان الانتخابات": 0,
+    "مبني العيادة التخصصية": 0,
+    "كفر الشيخ": 0,
+    "ادارة الفرع": 75,
+    "التوثيق والمعلومات": 75,
+    "الشئون الطبية": 75,
+    "الشئون القانونية": 75,
+    "المركبات": 75,
+    "الملحق": 75,
+    "ابو المطامير": 75,
+    "مدارس ابو المطامير": 0,
+    "مدرسة جانكليز": 0,
+    "ادكو طلاب": 75,
+    "ادكو قوي عاملة": 75,
+    "البيضا": 75,
+    "النوبارية": 75,
+    "قرية العشر آلاف فدان": 0,
+    "رشيد طلاب": 75,
+    "رشيد قوي عاملة": 75,
+    "ادارة المنطقة الاولي": 75,
+    "كفر الدوار طلاب": 75,
+    "كفر الدوار قوي عاملة": 100,
+    "كفر الدوار مسائي": 75,
+    "مستشفي كفر الدوار مسائي": 75,
+    "كفر الدوار طلاب صلاح سالم": 75,
+    "ابو حمص": 75,
+    "الرحمانية": 75,
+    "المحمودية": 75,
+    "المحمودية مسائي": 75,
+    "حوش عيسي طلاب": 75,
+    "حوش عيسي قوي عاملة": 75,
+    "مدارس حوش عيسي": 0,
+    "ادارة المنطقة الثانية": 75,
+    "الاجهزة التعويضية صلاح الدين": 75,
+    "الزراعة": 75,
+    "الشرطة": 75,
+    "العلاج الطبيعي": 75,
+    "اللجنة الطبية": 75,
+    "المخازن الطبية": 75,
+    "المخازن الغير طبية": 75,
+    "دمنهور الشاملة": 100,
+    "دمنهور طلاب": 75,
+    "دمنهور مسائي": 75,
+    "مديرية التربية والتعليم": 75,
+    "الدلنجات قوي عاملة": 75,
+    "الدلنجات مسائي": 75,
+    "الدلنجات طلاب": 75,
+    "ادارة المنطقة الثالثة": 75,
+    "ايتاي البارود": 100,
+    "ايتاي البارود طلاب": 75,
+    "ايتاي مسائي": 75,
+    "مستشفي ايتاي مسائي": 75,
+    "بدر": 75,
+    "علاج طبيعي": 75,
+    "شبراخيت طلاب": 75,
+    "شبراخيت قوي عاملة": 75,
+    "قليشان": 75,
+    "كوم حمادة طلاب": 75,
+    "كوم حمادة قوي عاملة": 75,
+    "كوم حمادة مسائي": 75,
+    "مستشفي كوم حمادة مسائي": 75,
+    "وادي النطرون": 75,
+    "الرقابة الادارية": 0,
+    "السعد خورشيد": 0,
+    "الصفوة اسكندرية": 0,
+    "بيجاد ذات العماد": 0,
+    "فوزي معاذ اسكندرية": 0,
+    "نيابة ابو المطامير": 0,
+    "نيابة الرحمانية": 0,
+    "نيابة ايتاي": 0,
+    "نيابة دمنهور": 0,
+    "نيابة شبين الكوم": 0,
+    "نيابة كفر الدوار": 0,
+    "نيابة كوم حمادة": 0
+  },
+  "pools": {
+    "fin": {
+      "id": "fin",
+      "name": "Financial/Admin",
+      "seats": {
+        "basic": 2,
+        "contracted": 1
+      }
+    },
+    "clin": {
+      "id": "clin",
+      "name": "Clinical",
+      "seats": {
+        "basic": 2,
+        "contracted": 2
+      }
+    }
+  },
+  "default_settings": {
+    "theme": "auto",
+    "range": "month",
+    "weekdays": [1, 2, 3, 4],
+    "holidays": [],
+    "exceptions": [],
+    "mode": "ratio",
+    "ratioP": 0.25,
+    "countsM": null,
+    "countsR": null,
+    "maxVisitsPerDay": 1,
+    "poolUtilizationCap": 0.85,
+    "cadence": {
+      "mode": "prefer",
+      "gapDays": 2,
+      "strength": 0.7,
+      "scope": "plan"
+    },
+    "weekdayProfiles": {},
+    "dayDefaults": {
+      "cap": null,
+      "ratio": null,
+      "auto": true
+    },
+    "dayOverrides": {},
+    "originMode": "count",
+    "originStrength": 0.5,
+    "preferenceCeiling": 2.5,
+    "critMatchStrength": 0.3,
+    "critMode": "require",
+    "preferenceWindow": 3,
+    "visitBudget": {
+      "kind": "auto",
+      "total": null,
+      "perWeek": null,
+      "spread": "even"
+    },
+    "pairRules": [],
+    "overTieMinVisits": 3,
+    "overTieMinRatio": 0.6,
+    "genderRule": {
+      "basic": "31",
+      "contracted": "off"
+    },
+    "globalDistanceBias": 0,
+    "familiarityGamma": 0.35,
+    "hardBlockOverTied": false,
+    "exportMode": "full",
+    "exportColumns": {
+      "facility": true,
+      "category": true,
+      "cycle": true,
+      "typeLabel": true,
+      "date": true,
+      "team": true
+    }
+  },
+  "admin_low_frequency_facilities": [
+    "ادارة الفرع",
+    "التوثيق والمعلومات",
+    "الشئون الطبية",
+    "الشئون القانونية",
+    "الملحق",
+    "الزراعة"
+  ],
+  "ranking_levels": [0, 25, 50, 75, 100],
+  "people": [
+    {
+      "id": "p_abaza",
+      "name": "أباظة",
+      "gender": "m",
+      "pool": "fin",
+      "rank": 75,
+      "rankBasic": 75,
+      "rankContracted": 75,
+      "weight": 1,
+      "active": true,
+      "blockedFacilities": [],
+      "unavailable": [],
+      "distanceAffinity": 0,
+      "workWeekdays": null,
+      "originLocationId": "دمنهور"
+    },
+    {
+      "id": "p_amani",
+      "name": "أماني",
+      "gender": "f",
+      "pool": "fin",
+      "rank": 50,
+      "rankBasic": 50,
+      "rankContracted": 100,
+      "weight": 1,
+      "active": true,
+      "blockedFacilities": [],
+      "unavailable": [],
+      "distanceAffinity": 0,
+      "workWeekdays": null,
+      "originLocationId": "دمنهور"
+    },
+    {
+      "id": "p_shaltoot",
+      "name": "شلتوت",
+      "gender": "m",
+      "pool": "fin",
+      "rank": 50,
+      "rankBasic": 50,
+      "rankContracted": 50,
+      "weight": 1,
+      "active": true,
+      "blockedFacilities": [],
+      "unavailable": [],
+      "distanceAffinity": 0,
+      "workWeekdays": null,
+      "originLocationId": "ايتاي"
+    },
+    {
+      "id": "p_ghada",
+      "name": "غادة",
+      "gender": "f",
+      "pool": "fin",
+      "rank": 50,
+      "rankBasic": 50,
+      "rankContracted": 50,
+      "weight": 1,
+      "active": true,
+      "blockedFacilities": [],
+      "unavailable": [],
+      "distanceAffinity": 0,
+      "workWeekdays": null,
+      "originLocationId": "دمنهور"
+    },
+    {
+      "id": "p_lobna",
+      "name": "لبنى",
+      "gender": "f",
+      "pool": "fin",
+      "rank": 50,
+      "rankBasic": 50,
+      "rankContracted": 75,
+      "weight": 1,
+      "active": true,
+      "blockedFacilities": [],
+      "unavailable": [],
+      "distanceAffinity": 0,
+      "workWeekdays": null,
+      "originLocationId": "دمنهور"
+    },
+    {
+      "id": "p_hamoudein",
+      "name": "حمودين",
+      "gender": "m",
+      "pool": "clin",
+      "rank": 50,
+      "rankBasic": 75,
+      "rankContracted": 25,
+      "weight": 1,
+      "active": true,
+      "blockedFacilities": [],
+      "unavailable": [],
+      "distanceAffinity": 0,
+      "workWeekdays": null,
+      "originLocationId": "دمنهور"
+    },
+    {
+      "id": "p_sharnouby",
+      "name": "شرنوبي",
+      "gender": "m",
+      "pool": "clin",
+      "rank": 50,
+      "rankBasic": 25,
+      "rankContracted": 50,
+      "weight": 1,
+      "active": true,
+      "blockedFacilities": [],
+      "unavailable": [],
+      "distanceAffinity": 0,
+      "workWeekdays": null,
+      "originLocationId": "دمنهور"
+    },
+    {
+      "id": "p_maysara",
+      "name": "ميسرة",
+      "gender": "m",
+      "pool": "clin",
+      "rank": 75,
+      "rankBasic": 75,
+      "rankContracted": 75,
+      "weight": 1,
+      "active": true,
+      "blockedFacilities": [],
+      "unavailable": [],
+      "distanceAffinity": 0,
+      "workWeekdays": null,
+      "originLocationId": "دمنهور"
+    },
+    {
+      "id": "p_shawky",
+      "name": "شوقي",
+      "gender": "m",
+      "pool": "clin",
+      "rank": 50,
+      "rankBasic": 25,
+      "rankContracted": 25,
+      "weight": 1,
+      "active": true,
+      "blockedFacilities": [],
+      "unavailable": [],
+      "distanceAffinity": 0,
+      "workWeekdays": null,
+      "originLocationId": "دمنهور"
+    },
+    {
+      "id": "p_mariam",
+      "name": "مريم",
+      "gender": "f",
+      "pool": "clin",
+      "rank": 75,
+      "rankBasic": 50,
+      "rankContracted": 100,
+      "weight": 1,
+      "active": true,
+      "blockedFacilities": [],
+      "unavailable": [],
+      "distanceAffinity": 0,
+      "workWeekdays": null,
+      "originLocationId": "كفر الدوار"
+    },
+    {
+      "id": "p_asmaa",
+      "name": "أسماء",
+      "gender": "f",
+      "pool": "clin",
+      "rank": 50,
+      "rankBasic": 50,
+      "rankContracted": 75,
+      "weight": 1,
+      "active": true,
+      "blockedFacilities": [],
+      "unavailable": [],
+      "distanceAffinity": 0,
+      "workWeekdays": null,
+      "originLocationId": "النفرة"
+    },
+    {
+      "id": "p_adib",
+      "name": "اديب",
+      "gender": "m",
+      "pool": "retired",
+      "title": "مالي واداري",
+      "rank": 50,
+      "rankBasic": 100,
+      "rankContracted": 50,
+      "weight": 1,
+      "active": true,
+      "blockedFacilities": [],
+      "unavailable": [],
+      "distanceAffinity": 0,
+      "workWeekdays": null,
+      "originLocationId": "دمنهور"
+    },
+    {
+      "id": "p_hindawy",
+      "name": "هنداوي",
+      "gender": "m",
+      "pool": "retired",
+      "title": "حاسب الي",
+      "rank": 50,
+      "rankBasic": 50,
+      "rankContracted": 75,
+      "weight": 1,
+      "active": true,
+      "blockedFacilities": [],
+      "unavailable": [],
+      "distanceAffinity": 0,
+      "workWeekdays": null,
+      "originLocationId": "دمنهور"
+    },
+    {
+      "id": "p_sobhy",
+      "name": "صبحي",
+      "gender": "m",
+      "pool": "retired",
+      "title": "فني",
+      "rank": 50,
+      "rankBasic": 25,
+      "rankContracted": 25,
+      "weight": 1,
+      "active": true,
+      "blockedFacilities": [],
+      "unavailable": [],
+      "distanceAffinity": 0,
+      "workWeekdays": null,
+      "originLocationId": "دمنهور"
+    }
+  ],
+  "facilities": [
+    {
+      "id": "f_0",
+      "name": "هيئة التأمين الصحي",
+      "category": "اخري",
+      "location": "القاهرة",
+      "kind": "excluded",
+      "weight": 1,
+      "crit": 0
+    },
+    {
+      "id": "f_1",
+      "name": "المحافظة",
+      "category": "اخري",
+      "location": "دمنهور",
+      "kind": "excluded",
+      "weight": 1,
+      "crit": 0
+    },
+    {
+      "id": "f_2",
+      "name": "سنترال دمنهور",
+      "category": "اخري",
+      "location": "دمنهور",
+      "kind": "excluded",
+      "weight": 1,
+      "crit": 0
+    },
+    {
+      "id": "f_3",
+      "name": "لجان الانتخابات",
+      "category": "اخري",
+      "location": "دمنهور",
+      "kind": "excluded",
+      "weight": 1,
+      "crit": 0
+    },
+    {
+      "id": "f_4",
+      "name": "مبني العيادة التخصصية",
+      "category": "اخري",
+      "location": "دمنهور",
+      "kind": "excluded",
+      "weight": 1,
+      "crit": 0
+    },
+    {
+      "id": "f_5",
+      "name": "كفر الشيخ",
+      "category": "اخري",
+      "location": "كفر الشيخ",
+      "kind": "excluded",
+      "weight": 1,
+      "crit": 0
+    },
+    {
+      "id": "f_6",
+      "name": "ادارة الفرع",
+      "category": "ادارة الفرع",
+      "location": "دمنهور",
+      "kind": "basic",
+      "weight": 0.5,
+      "crit": 75
+    },
+    {
+      "id": "f_7",
+      "name": "التوثيق والمعلومات",
+      "category": "ادارة الفرع",
+      "location": "دمنهور",
+      "kind": "basic",
+      "weight": 0.5,
+      "crit": 75
+    },
+    {
+      "id": "f_8",
+      "name": "الشئون الطبية",
+      "category": "ادارة الفرع",
+      "location": "دمنهور",
+      "kind": "basic",
+      "weight": 0.5,
+      "crit": 75
+    },
+    {
+      "id": "f_9",
+      "name": "الشئون القانونية",
+      "category": "ادارة الفرع",
+      "location": "دمنهور",
+      "kind": "basic",
+      "weight": 0.5,
+      "crit": 75
+    },
+    {
+      "id": "f_10",
+      "name": "المركبات",
+      "category": "ادارة الفرع",
+      "location": "دمنهور",
+      "kind": "basic",
+      "weight": 0.5,
+      "crit": 75
+    },
+    {
+      "id": "f_11",
+      "name": "الملحق",
+      "category": "ادارة الفرع",
+      "location": "دمنهور",
+      "kind": "basic",
+      "weight": 0.5,
+      "crit": 75
+    },
+    {
+      "id": "f_12",
+      "name": "دار الشفا ابو حمص",
+      "category": "اشعة",
+      "location": "ابو حمص",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_13",
+      "name": "مركز ابو حمص للاشعة",
+      "category": "اشعة",
+      "location": "ابو حمص",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_14",
+      "name": "مركز اشعة فيرست",
+      "category": "اشعة",
+      "location": "المحمودية",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_15",
+      "name": "المستقبل للاشعة",
+      "category": "اشعة",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_16",
+      "name": "بحيرة سكان",
+      "category": "اشعة",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_17",
+      "name": "مركز دمنهور للاشعة",
+      "category": "اشعة",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_18",
+      "name": "مركز محمد عمرو",
+      "category": "اشعة",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_19",
+      "name": "مصطفي الاجهوري",
+      "category": "اشعة",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_20",
+      "name": "دلتا سكان",
+      "category": "اشعة",
+      "location": "كفر الدوار",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_21",
+      "name": "كفر الدوار سكان",
+      "category": "اشعة",
+      "location": "كفر الدوار",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_22",
+      "name": "كفر الدوار للاشعة",
+      "category": "اشعة",
+      "location": "كفر الدوار",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_23",
+      "name": "مصر سكان",
+      "category": "اشعة",
+      "location": "كفر الدوار",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_24",
+      "name": "العليمي سكان",
+      "category": "اشعة",
+      "location": "كوم حمادة",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_25",
+      "name": "تسلا كوم حمادة",
+      "category": "اشعة",
+      "location": "كوم حمادة",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_26",
+      "name": "نيوروهيلث",
+      "category": "اشعة",
+      "location": "كوم حمادة",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_27",
+      "name": "ابو المطامير",
+      "category": "الاولي",
+      "location": "ابو المطامير",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_28",
+      "name": "مدارس ابو المطامير",
+      "category": "اخري",
+      "location": "ابو المطامير",
+      "kind": "excluded",
+      "weight": 1,
+      "crit": 0
+    },
+    {
+      "id": "f_29",
+      "name": "مدرسة جانكليز",
+      "category": "اخري",
+      "location": "ابو المطامير",
+      "kind": "excluded",
+      "weight": 1,
+      "crit": 0
+    },
+    {
+      "id": "f_30",
+      "name": "ادكو طلاب",
+      "category": "الاولي",
+      "location": "ادكو",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_31",
+      "name": "ادكو قوي عاملة",
+      "category": "الاولي",
+      "location": "ادكو",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_32",
+      "name": "البيضا",
+      "category": "الاولي",
+      "location": "البيضا",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_33",
+      "name": "النوبارية",
+      "category": "الاولي",
+      "location": "النوبارية",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_34",
+      "name": "قرية العشر آلاف فدان",
+      "category": "اخري",
+      "location": "النوبارية",
+      "kind": "excluded",
+      "weight": 1,
+      "crit": 0
+    },
+    {
+      "id": "f_35",
+      "name": "رشيد طلاب",
+      "category": "الاولي",
+      "location": "رشيد",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_36",
+      "name": "رشيد قوي عاملة",
+      "category": "الاولي",
+      "location": "رشيد",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_37",
+      "name": "ادارة المنطقة الاولي",
+      "category": "الاولي",
+      "location": "كفر الدوار",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_38",
+      "name": "كفر الدوار طلاب",
+      "category": "الاولي",
+      "location": "كفر الدوار",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_39",
+      "name": "كفر الدوار قوي عاملة",
+      "category": "الاولي",
+      "location": "كفر الدوار",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 100
+    },
+    {
+      "id": "f_40",
+      "name": "كفر الدوار مسائي",
+      "category": "الاولي",
+      "location": "كفر الدوار",
+      "kind": "basic",
+      "weight": 0.35,
+      "crit": 75
+    },
+    {
+      "id": "f_41",
+      "name": "مستشفي كفر الدوار مسائي",
+      "category": "الاولي",
+      "location": "كفر الدوار",
+      "kind": "basic",
+      "weight": 0.35,
+      "crit": 75
+    },
+    {
+      "id": "f_42",
+      "name": "كفر الدوار طلاب صلاح سالم",
+      "category": "الاولي",
+      "location": "كفر الدوار",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_43",
+      "name": "ابو حمص",
+      "category": "الثانية",
+      "location": "ابو حمص",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_44",
+      "name": "الرحمانية",
+      "category": "الثانية",
+      "location": "الرحمانية",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_45",
+      "name": "المحمودية",
+      "category": "الثانية",
+      "location": "المحمودية",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_46",
+      "name": "المحمودية مسائي",
+      "category": "الثانية",
+      "location": "المحمودية",
+      "kind": "basic",
+      "weight": 0.35,
+      "crit": 75
+    },
+    {
+      "id": "f_47",
+      "name": "حوش عيسي طلاب",
+      "category": "الثانية",
+      "location": "حوش عيسي",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_48",
+      "name": "حوش عيسي قوي عاملة",
+      "category": "الثانية",
+      "location": "حوش عيسي",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_49",
+      "name": "مدارس حوش عيسي",
+      "category": "اخري",
+      "location": "حوش عيسي",
+      "kind": "excluded",
+      "weight": 1,
+      "crit": 0
+    },
+    {
+      "id": "f_50",
+      "name": "ادارة المنطقة الثانية",
+      "category": "الثانية",
+      "location": "دمنهور",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_51",
+      "name": "الاجهزة التعويضية صلاح الدين",
+      "category": "الثانية",
+      "location": "دمنهور",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_52",
+      "name": "الزراعة",
+      "category": "الثانية",
+      "location": "دمنهور",
+      "kind": "basic",
+      "weight": 0.5,
+      "crit": 75
+    },
+    {
+      "id": "f_53",
+      "name": "الشرطة",
+      "category": "الثانية",
+      "location": "دمنهور",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_54",
+      "name": "العلاج الطبيعي",
+      "category": "الثانية",
+      "location": "دمنهور",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_55",
+      "name": "اللجنة الطبية",
+      "category": "الثانية",
+      "location": "دمنهور",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_56",
+      "name": "المخازن الطبية",
+      "category": "الثانية",
+      "location": "دمنهور",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_57",
+      "name": "المخازن الغير طبية",
+      "category": "الثانية",
+      "location": "دمنهور",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_58",
+      "name": "دمنهور الشاملة",
+      "category": "الثانية",
+      "location": "دمنهور",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 100
+    },
+    {
+      "id": "f_59",
+      "name": "دمنهور طلاب",
+      "category": "الثانية",
+      "location": "دمنهور",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_60",
+      "name": "دمنهور مسائي",
+      "category": "الثانية",
+      "location": "دمنهور",
+      "kind": "basic",
+      "weight": 0.35,
+      "crit": 75
+    },
+    {
+      "id": "f_61",
+      "name": "مديرية التربية والتعليم",
+      "category": "الثانية",
+      "location": "دمنهور",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_62",
+      "name": "الدلنجات قوي عاملة",
+      "category": "الثالثة",
+      "location": "الدلنجات",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_63",
+      "name": "الدلنجات مسائي",
+      "category": "الثالثة",
+      "location": "الدلنجات",
+      "kind": "basic",
+      "weight": 0.35,
+      "crit": 75
+    },
+    {
+      "id": "f_64",
+      "name": "الدلنجات طلاب",
+      "category": "الثالثة",
+      "location": "الدلنجات",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_65",
+      "name": "ادارة المنطقة الثالثة",
+      "category": "الثالثة",
+      "location": "ايتاي",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_66",
+      "name": "ايتاي البارود",
+      "category": "الثالثة",
+      "location": "ايتاي",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 100
+    },
+    {
+      "id": "f_67",
+      "name": "ايتاي البارود طلاب",
+      "category": "الثالثة",
+      "location": "ايتاي",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_68",
+      "name": "ايتاي مسائي",
+      "category": "الثالثة",
+      "location": "ايتاي",
+      "kind": "basic",
+      "weight": 0.35,
+      "crit": 75
+    },
+    {
+      "id": "f_69",
+      "name": "مستشفي ايتاي مسائي",
+      "category": "الثالثة",
+      "location": "ايتاي",
+      "kind": "basic",
+      "weight": 0.35,
+      "crit": 75
+    },
+    {
+      "id": "f_70",
+      "name": "بدر",
+      "category": "الثالثة",
+      "location": "بدر",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_71",
+      "name": "علاج طبيعي",
+      "category": "الثالثة",
+      "location": "دمنهور",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_72",
+      "name": "شبراخيت طلاب",
+      "category": "الثالثة",
+      "location": "شبراخيت",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_73",
+      "name": "شبراخيت قوي عاملة",
+      "category": "الثالثة",
+      "location": "شبراخيت",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_74",
+      "name": "قليشان",
+      "category": "الثالثة",
+      "location": "قليشان",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_75",
+      "name": "كوم حمادة طلاب",
+      "category": "الثالثة",
+      "location": "كوم حمادة",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_76",
+      "name": "كوم حمادة قوي عاملة",
+      "category": "الثالثة",
+      "location": "كوم حمادة",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_77",
+      "name": "كوم حمادة مسائي",
+      "category": "الثالثة",
+      "location": "كوم حمادة",
+      "kind": "basic",
+      "weight": 0.35,
+      "crit": 75
+    },
+    {
+      "id": "f_78",
+      "name": "مستشفي كوم حمادة مسائي",
+      "category": "الثالثة",
+      "location": "كوم حمادة",
+      "kind": "basic",
+      "weight": 0.35,
+      "crit": 75
+    },
+    {
+      "id": "f_79",
+      "name": "وادي النطرون",
+      "category": "الثالثة",
+      "location": "وادي النطرون",
+      "kind": "basic",
+      "weight": 1,
+      "crit": 75
+    },
+    {
+      "id": "f_80",
+      "name": "الرقابة الادارية",
+      "category": "الرقابة الادارية",
+      "location": "دمنهور",
+      "kind": "excluded",
+      "weight": 1,
+      "crit": 0
+    },
+    {
+      "id": "f_81",
+      "name": "دار الحكمة ابو حمص",
+      "category": "حضانات",
+      "location": "ابو حمص",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_82",
+      "name": "حضانات الرعاية المتكاملة",
+      "category": "حضانات",
+      "location": "الدلنجات",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_83",
+      "name": "حضانات الصفوة بالدلنجات",
+      "category": "حضانات",
+      "location": "الدلنجات",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_84",
+      "name": "دار السلام للحضانات",
+      "category": "حضانات",
+      "location": "الدلنجات",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_85",
+      "name": "حضانات اجيال",
+      "category": "حضانات",
+      "location": "حوش عيسي",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_86",
+      "name": "حضانات رعاية المرضي",
+      "category": "حضانات",
+      "location": "حوش عيسي",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_87",
+      "name": "حضانات الدواء الشافي",
+      "category": "حضانات",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_88",
+      "name": "جمعية تنمية المجتمع بشرنوب",
+      "category": "حضانات",
+      "location": "شرنوب",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_89",
+      "name": "الحياة للحضانات",
+      "category": "حضانات",
+      "location": "كفر الدوار",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_90",
+      "name": "حضانات جنين",
+      "category": "حضانات",
+      "location": "كوم حمادة",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_91",
+      "name": "سعادة الدارين",
+      "category": "حضانات",
+      "location": "كوم حمادة",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_92",
+      "name": "ادفينا غسيل كلوي",
+      "category": "غسيل كلوي",
+      "location": "ادفينا",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_93",
+      "name": "نور الايمان",
+      "category": "غسيل كلوي",
+      "location": "ادكو",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_94",
+      "name": "اصدقاء اليتيم للغسيل الكلوي",
+      "category": "غسيل كلوي",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_95",
+      "name": "مركز دار الكلي",
+      "category": "غسيل كلوي",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_96",
+      "name": "مركز دمنهور للكلي",
+      "category": "غسيل كلوي",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_97",
+      "name": "مركز رشيد للغسيل الكلوي",
+      "category": "غسيل كلوي",
+      "location": "رشيد",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_98",
+      "name": "جمعية الهدي كفر الدوار",
+      "category": "غسيل كلوي",
+      "location": "كفر الدوار",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_99",
+      "name": "تنمية المجتمع واقد",
+      "category": "غسيل كلوي",
+      "location": "كوم حمادة",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_100",
+      "name": "مستشفي بلال التخصصي",
+      "category": "مستشفي",
+      "location": "ابو حمص",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_101",
+      "name": "مستشفي ادفينا المركزي",
+      "category": "مستشفي",
+      "location": "ادفينا",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_102",
+      "name": "مستشفي الفخراني",
+      "category": "مستشفي",
+      "location": "ادفينا",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_103",
+      "name": "مستشفي ادكو",
+      "category": "مستشفي",
+      "location": "ادكو",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_104",
+      "name": "السعد خورشيد",
+      "category": "مستشفي",
+      "location": "اسكندرية",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 0
+    },
+    {
+      "id": "f_105",
+      "name": "الصفوة اسكندرية",
+      "category": "مستشفي",
+      "location": "اسكندرية",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 0
+    },
+    {
+      "id": "f_106",
+      "name": "بيجاد ذات العماد",
+      "category": "مستشفي",
+      "location": "اسكندرية",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 0
+    },
+    {
+      "id": "f_107",
+      "name": "فوزي معاذ اسكندرية",
+      "category": "مستشفي",
+      "location": "اسكندرية",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 0
+    },
+    {
+      "id": "f_108",
+      "name": "مستشفي دار الشفا بالدلنجات",
+      "category": "مستشفي",
+      "location": "الدلنجات",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_109",
+      "name": "الصفوة الرحمانية",
+      "category": "مستشفي",
+      "location": "الرحمانية",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_110",
+      "name": "جمعية الحمد الاسلامية",
+      "category": "مستشفي",
+      "location": "الرحمانية",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_111",
+      "name": "مستشفي CIC",
+      "category": "مستشفي",
+      "location": "ايتاي",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_112",
+      "name": "مستشفي الرحمة نكلا العنب",
+      "category": "مستشفي",
+      "location": "ايتاي",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_113",
+      "name": "مستشفي ايتاي",
+      "category": "مستشفي",
+      "location": "ايتاي",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_114",
+      "name": "مستشفي دار الشروق",
+      "category": "مستشفي",
+      "location": "ايتاي",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_115",
+      "name": "مستشفي نور الرحمن",
+      "category": "مستشفي",
+      "location": "ايتاي",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_116",
+      "name": "ممستشفي الرسالة",
+      "category": "مستشفي",
+      "location": "بدر",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_117",
+      "name": "الزهراء الحديثة حوش عيسي",
+      "category": "مستشفي",
+      "location": "حوش عيسي",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_118",
+      "name": "مستشفي المدينة حوش عيسي",
+      "category": "مستشفي",
+      "location": "حوش عيسي",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_119",
+      "name": "السعد دمنهور",
+      "category": "مستشفي",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_120",
+      "name": "المبرة دمنهور",
+      "category": "مستشفي",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_121",
+      "name": "الهلال الاحمر",
+      "category": "مستشفي",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_122",
+      "name": "دار الشفا دمنهور",
+      "category": "مستشفي",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_123",
+      "name": "رواد الوادي",
+      "category": "مستشفي",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_124",
+      "name": "مركز مصطفي النجار",
+      "category": "مستشفي",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_125",
+      "name": "مستشفي الراعي الصالح",
+      "category": "مستشفي",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_126",
+      "name": "مستشفي الفاروق",
+      "category": "مستشفي",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_127",
+      "name": "مستشفي النور للعيون",
+      "category": "مستشفي",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_128",
+      "name": "مستشفي النيل للقلب",
+      "category": "مستشفي",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_129",
+      "name": "مستشفي دار الامومة",
+      "category": "مستشفي",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_130",
+      "name": "مستشفي دار السلام",
+      "category": "مستشفي",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_131",
+      "name": "مستشفي دار الطفل",
+      "category": "مستشفي",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_132",
+      "name": "مستشفي دمنهور للعيون",
+      "category": "مستشفي",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_133",
+      "name": "مستشفي رويال الشرق",
+      "category": "مستشفي",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_134",
+      "name": "مستشفي كونكورد",
+      "category": "مستشفي",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_135",
+      "name": "مستشفي ليدي كير",
+      "category": "مستشفي",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_136",
+      "name": "يحيي راضي",
+      "category": "مستشفي",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_137",
+      "name": "مستشفي باشا رشيد",
+      "category": "مستشفي",
+      "location": "رشيد",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_138",
+      "name": "مستشفي نبض الحياة",
+      "category": "مستشفي",
+      "location": "رشيد",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_139",
+      "name": "الصفوة للعيون كفر الدوار",
+      "category": "مستشفي",
+      "location": "كفر الدوار",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_140",
+      "name": "المبرة كفر الدوار",
+      "category": "مستشفي",
+      "location": "كفر الدوار",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_141",
+      "name": "مركز الجهاز الهضمي كفر الدوار",
+      "category": "مستشفي",
+      "location": "كفر الدوار",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_142",
+      "name": "مستشفي الاندلس",
+      "category": "مستشفي",
+      "location": "كوم حمادة",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_143",
+      "name": "مستشفي الحجاز",
+      "category": "مستشفي",
+      "location": "كوم حمادة",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_144",
+      "name": "معمل النجيلي",
+      "category": "معمل",
+      "location": "المحمودية",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_145",
+      "name": "معمل صالح",
+      "category": "معمل",
+      "location": "المحمودية",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_146",
+      "name": "معمل شريف نوح",
+      "category": "معمل",
+      "location": "حوش عيسي",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_147",
+      "name": "معمل البرج",
+      "category": "معمل",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_148",
+      "name": "معمل الشمس",
+      "category": "معمل",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_149",
+      "name": "معمل الفا",
+      "category": "معمل",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_150",
+      "name": "معمل المختبر",
+      "category": "معمل",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_151",
+      "name": "معمل بديوي",
+      "category": "معمل",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_152",
+      "name": "معمل حساب",
+      "category": "معمل",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_153",
+      "name": "معمل شلبي",
+      "category": "معمل",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_154",
+      "name": "معمل مبرة العصافرة",
+      "category": "معمل",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_155",
+      "name": "معمل مركز دار الكلي",
+      "category": "معمل",
+      "location": "دمنهور",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_156",
+      "name": "معمل سبيد",
+      "category": "معمل",
+      "location": "كفر الدوار",
+      "kind": "contracted",
+      "weight": 1,
+      "crit": 50
+    },
+    {
+      "id": "f_157",
+      "name": "نيابة ابو المطامير",
+      "category": "نيابة",
+      "location": "ابو المطامير",
+      "kind": "excluded",
+      "weight": 1,
+      "crit": 0
+    },
+    {
+      "id": "f_158",
+      "name": "نيابة الرحمانية",
+      "category": "نيابة",
+      "location": "الرحمانية",
+      "kind": "excluded",
+      "weight": 1,
+      "crit": 0
+    },
+    {
+      "id": "f_159",
+      "name": "نيابة ايتاي",
+      "category": "نيابة",
+      "location": "ايتاي",
+      "kind": "excluded",
+      "weight": 1,
+      "crit": 0
+    },
+    {
+      "id": "f_160",
+      "name": "نيابة دمنهور",
+      "category": "نيابة",
+      "location": "دمنهور",
+      "kind": "excluded",
+      "weight": 1,
+      "crit": 0
+    },
+    {
+      "id": "f_161",
+      "name": "نيابة شبين الكوم",
+      "category": "نيابة",
+      "location": "شبين الكوم",
+      "kind": "excluded",
+      "weight": 1,
+      "crit": 0
+    },
+    {
+      "id": "f_162",
+      "name": "نيابة كفر الدوار",
+      "category": "نيابة",
+      "location": "كفر الدوار",
+      "kind": "excluded",
+      "weight": 1,
+      "crit": 0
+    },
+    {
+      "id": "f_163",
+      "name": "نيابة كوم حمادة",
+      "category": "نيابة",
+      "location": "كوم حمادة",
+      "kind": "excluded",
+      "weight": 1,
+      "crit": 0
+    }
+  ],
+  "routes": [],
+  "rulebook": [
+    {
+      "on": true,
+      "rel": "team",
+      "sense": "prefer",
+      "what": { "k": "cat", "v": "basic" },
+      "op": "max",
+      "n": 1,
+      "who": { "k": "gender", "v": "f" },
+      "w": 40,
+      "note": "at most 1 woman per basic visit"
+    },
+    {
+      "on": true,
+      "rel": "team",
+      "sense": "prefer",
+      "what": { "k": "critGe", "v": "100" },
+      "op": "min",
+      "n": 1,
+      "who": { "k": "rankGe", "v": "75" },
+      "w": 55,
+      "note": "critical places get at least one strong member"
+    },
+    {
+      "on": false,
+      "rel": "site",
+      "sense": "avoid",
+      "who": { "k": "all", "v": "" },
+      "what": { "k": "kmGe", "v": "70" },
+      "w": 35,
+      "note": "keep long trips rare"
+    },
+    {
+      "on": false,
+      "rel": "day",
+      "sense": "never",
+      "who": { "k": "gender", "v": "f" },
+      "what": { "k": "dow", "v": [false, false, false, false, false, true, false] },
+      "w": 50,
+      "note": "example: no Friday duty"
+    },
+    {
+      "on": false,
+      "rel": "with",
+      "sense": "avoid",
+      "who": { "k": "rankLe", "v": "25" },
+      "what": { "k": "rankLe", "v": "25" },
+      "w": 50,
+      "note": "two juniors should not go alone together"
+    }
+  ]
+}
