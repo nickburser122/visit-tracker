@@ -1,53 +1,35 @@
 # عدّاد · Addad
 
-Works out travel allowances (بدلات المرور) from the inspection-visits Excel sheet. Plain JS, no libraries, runs entirely in the browser.
+Works out travel allowances (بدلات المرور) from the inspection-visits Excel sheet and produces visit-activity reports. Plain JS, no libraries, runs entirely in the browser.
 
-## Input format (tailored)
-One sheet, header row `اليوم | جهة المرور | الغرض من المرور | القائم بالمرور | سيارة الهيئة`, one row per calendar day, e.g. ` Tue 01 Apr 2025 | | | | FALSE`.
-- Exact header match is detected first and imported directly, with no dialog and no guessing.
-- Empty days (no entity and no names) are skipped silently and counted as "يوم فارغ".
-- Other sheets are ignored unless they share the exact header.
-- Fuzzy detection is only a fallback for unfamiliar files, and opens the review dialog.
-- Settings sheets (المدن، الافراد، …) are still read when present.
+## What's new
+- **Calm palette (iris · clay · sage):** low-chroma muted periwinkle as the single accent, with warm clay for "no car" and cost notes and soft sage for "by car". Light mode uses cool paper; dark mode uses soft slate. Every accent is a CSS variable (`--v1/--v2/--v3`, `--acc*`, `--clay-*`, `--sage-*`) in `css/style.css`.
+- **Unified filter board:** replaces the people tabs and the lenses. Every category appears as a row of chips: الغرض · الانتقال · النطاق · الأفراد · المبلغ · نوع البند · نوع الجهة · المسافة · المدينة · الجهة.
+  - Within a group, picks combine as **any of** (OR). Across groups they combine as **all of** (AND). You can pick one category, several, or some of each.
+  - Each chip shows a live facet count: how many visits you would get if you added it. Chips that would give no results are dimmed.
+  - Large groups show the top 8 and a "+N" button that opens a search list.
+  - The search box (`/`), active chips, and clear/undo all work the same way.
+- **Purposes expanded:** "أخرى" is gone. Every purpose from the sheet (شكوى، لجنة، متابعة …) is its own filterable value. خطة المرور is still grouped.
+- **People tab:** follows the filter board. It has a view switch (ملخص / كشف البنود / حسب الزيارة), exclusions, Excel, and PDF statements. Clicking a name filters to that person.
+- **Activity report (تقرير النشاط):** opened from the top bar, from the "تقرير لهذا العرض" link under the filters, from the purposes panel, or with `Ctrl R`.
+  - Scope: العرض الحالي / الفترة فقط / كل الفترات.
+  - Optional sections: overall summary, with/without car (visits and participations, including mixed visits), by purpose, by person (car/no-car and purpose split), person × purpose, by entity type, city, month, and entity.
+  - Cost appears only as a **note**: the estimated total at current prices, a breakdown, and a statement of the calculation basis. It says clearly that prices change and that the note is not a payment document. An optional "prices used" table can be added.
+  - Live A4 preview with automatic pagination: tables continue across pages, and short tables are not split. Export to **PDF** (print) or **XLSX** (one sheet per section). Your options are remembered.
 
-## Features
-- **Period picker:** two modes.
-  - **شهور:** a year grid. Tap any months, including non-adjacent ones. Year and quarter shortcuts. Double-click applies a single month.
-  - **تاريخ محدد:** typed `من` / `إلى` fields with a live parse hint. Accepts `7/4`, `7/4/2025`, `15 مارس`, and `4/2025` (whole month). The year defaults to the data year. Enter applies.
-  - ‹ › arrows step to the previous or next period of the same length.
-- **People tab · عرض (lenses):** one-tap views with live counts:
-  - كل البنود
-  - بالسيارة
-  - بالسيارة بلا مبلغ
-  - بالسيارة بمبلغ
-  - بدون سيارة
-  - صفر فقط
-  - بلا سعر
-  - بدل سفر
-  - سيرفيس
-  - خارج دمنهور بدون سيارة
-- **New filters:** المبلغ (له مبلغ / صفر / بلا سعر) and البند (line kind), also in the filter bar, search and chips.
-- **Exclusions:** "استبعاد بنود" mode lets you untick individual participations. Excluded items:
-  - leave totals, statements, PDF and Excel;
-  - show struck-through only in edit mode;
-  - can be undone from a chip.
-- **WYSIWYG output:** PDF and Excel use exactly the on-screen result. The PDF subtitle states the scope (e.g. "بالسيارة · بلا مبلغ").
-- People summary is sortable by any column and has a "بلا مبلغ" column. Visits show amounts for the filtered people only; other people on a visit are dimmed.
-- Dashboard, visits table, settings, and import review are unchanged in function.
+## Entry points
+- `index.html`: the app. `index.html?demo` loads demo data, `#open=report` opens the report dialog, `#open=filters` expands the filter board.
 
-## Fixes
-- Dropdowns opened inside modals (import column mapping, PDF people picker) appeared behind the modal; the z-index is fixed.
-- Weekday stripping no longer eats letters inside Arabic words.
-- Saved UI state is validated, so corrupt localStorage can't break filters.
-- Changing a person's grade refreshes the filter bar and chips as well.
-- The template now mirrors the real one-row-per-day sheet.
+## Input format
+One sheet with the header row `اليوم | جهة المرور | الغرض من المرور | القائم بالمرور | سيارة الهيئة`, one row per day. Settings sheets (المدن، الافراد، …) are read when present. Fuzzy column detection is used as a fallback.
 
 ## Storage
-localStorage only: `addad2.settings`, `addad2.data`, `addad3.ui` (filters, excluded items), `addad2.theme`.
+localStorage only: `addad2.settings`, `addad2.data`, `addad3.ui` (filters, view, exclusions), `addad3.act` (report options), `addad2.theme`. Old `sel` people tabs are migrated into the people filter.
 
 ## Files
-`index.html` · `css/style.css` · `js/{data,xlsx,ui,engine,picker,filters,io,report,views,app}.js` · `images/`
+`index.html` · `css/style.css` · `js/{data,xlsx,ui,engine,picker,filters,io,report,activity,views,app}.js` · `images/`
 
 ## Not yet
 - Old `.xls` format (save as xlsx).
-- Per-line (rather than per-participation) exclusion.
+- Saved named filter presets.
+- Charts inside the PDF activity report (tables and bars only).

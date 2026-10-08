@@ -1,9 +1,9 @@
 const KEY = { settings: "addad2.settings", data: "addad2.data", ui: "addad3.ui", theme: "addad2.theme" };
-const BLANK_FILTERS = () => ({ months: [], from: "", to: "", pur: [], car: [], zone: [], people: [], cities: [], types: [], ents: [], bands: [], amt: [], kinds: [], q: "" });
+const BLANK_FILTERS = () => ({ months: [], from: "", to: "", purp: [], car: [], zone: [], people: [], cities: [], types: [], ents: [], bands: [], amt: [], kinds: [], q: "" });
 
 const S = {
   settings: null, raw: [], file: "", sheet: "", sheets: [],
-  tab: "dash", sel: [], pview: "statement", theme: "system", vlimit: 200, vsort: "d-desc", advOpen: null, excl: [], editMode: false,
+  tab: "dash", pview: "table", sheetCap: 8, theme: "system", vlimit: 200, vsort: "d-desc", advOpen: null, excl: [], editMode: false,
   filters: BLANK_FILTERS()
 };
 
@@ -39,13 +39,15 @@ function loadStore() {
     const u = JSON.parse(localStorage.getItem(KEY.ui) || "null");
     if (u) {
       S.tab = ["dash", "visits", "people", "prices"].includes(u.tab) ? u.tab : "dash";
-      S.sel = Array.isArray(u.sel) ? u.sel : [];
-      S.pview = u.pview === "ledger" ? "ledger" : "statement";
+      S.pview = ["table", "statement", "ledger"].includes(u.pview) ? u.pview : "table";
       S.vsort = u.vsort || "d-desc";
       S.advOpen = u.advOpen ?? null;
       S.excl = Array.isArray(u.excl) ? u.excl : [];
-      const f = { ...BLANK_FILTERS(), ...(u.filters || {}) };
-      for (const k of Object.keys(BLANK_FILTERS())) if (k !== "q" && k !== "from" && k !== "to" && !Array.isArray(f[k])) f[k] = [];
+      const base = BLANK_FILTERS();
+      const f = { ...base };
+      for (const k of Object.keys(base)) if (u.filters && k in u.filters) f[k] = u.filters[k];
+      for (const k of Object.keys(base)) if (k !== "q" && k !== "from" && k !== "to" && !Array.isArray(f[k])) f[k] = [];
+      if (Array.isArray(u.sel) && u.sel.length && !f.people.length) f.people = u.sel;
       S.filters = f;
     }
   } catch (e) {}
@@ -55,14 +57,14 @@ function loadStore() {
 function saveSettings() { try { localStorage.setItem(KEY.settings, JSON.stringify(S.settings)); } catch (e) {} }
 function saveData() { try { localStorage.setItem(KEY.data, JSON.stringify({ raw: S.raw, file: S.file, sheet: S.sheet })); } catch (e) { UI.toast("الملف أكبر من التخزين المحلي", { error: true }); } }
 let uiT = 0;
-function saveUi() { clearTimeout(uiT); uiT = setTimeout(() => { try { localStorage.setItem(KEY.ui, JSON.stringify({ tab: S.tab, sel: S.sel, pview: S.pview, vsort: S.vsort, advOpen: S.advOpen, filters: S.filters, excl: S.excl })); } catch (e) {} }, 150); }
+function saveUi() { clearTimeout(uiT); uiT = setTimeout(() => { try { localStorage.setItem(KEY.ui, JSON.stringify({ tab: S.tab, pview: S.pview, vsort: S.vsort, advOpen: S.advOpen, filters: S.filters, excl: S.excl })); } catch (e) {} }, 150); }
 
 const darkMq = matchMedia("(prefers-color-scheme: dark)");
 function applyTheme() {
   const t = S.theme === "system" ? (darkMq.matches ? "dark" : "light") : S.theme;
   document.documentElement.dataset.theme = t;
   const tc = document.querySelector('meta[name="theme-color"]');
-  if (tc) tc.content = t === "dark" ? "#121211" : "#f5f1ea";
+  if (tc) tc.content = t === "dark" ? "#15171a" : "#f4f2ee";
   const b = document.getElementById("theme-btn");
   if (b) { b.innerHTML = UI.icons[S.theme === "system" ? "auto" : S.theme === "dark" ? "moon" : "sun"]; b.title = { system: "المظهر: تلقائي", dark: "المظهر: داكن", light: "المظهر: فاتح" }[S.theme]; b.setAttribute("aria-label", b.title); }
 }
@@ -108,13 +110,15 @@ function renderTop() {
   document.getElementById("file-info").title = has ? S.file + " · «" + S.sheet + "»" : "";
   const ic = UI.icons;
   document.getElementById("top-actions").innerHTML = (has
-    ? '<button class="btn sm solid" id="act-pdf">' + ic.pdf + '<span>PDF</span></button><button class="btn sm" id="act-more" aria-haspopup="menu" aria-label="المزيد">' + ic.more + "<span>المزيد</span></button>"
+    ? '<button class="btn sm" id="act-rep">' + ic.report + '<span>تقرير النشاط</span></button><button class="btn sm solid" id="act-pdf">' + ic.pdf + '<span>الكشوف</span></button><button class="btn sm" id="act-more" aria-haspopup="menu" aria-label="المزيد">' + ic.more + "<span>المزيد</span></button>"
     : '<button class="btn sm" id="act-tpl">' + ic.dl + "<span>القالب</span></button>") + '<button class="icon-btn" id="theme-btn"></button>';
   const on = (id, fn) => { const b = document.getElementById(id); if (b) b.onclick = fn; };
   on("act-pdf", () => REPORT.dialog());
+  on("act-rep", () => ACT.dialog());
   on("act-more", e => UI.menu(e.currentTarget, [
     { icon: ic.upload, label: "استيراد", kbd: "Ctrl O", run: () => document.getElementById("file-input").click() },
-    { icon: ic.sheet, label: "تقرير Excel", run: () => IO.exportExcel(currentResult()) },
+    { icon: ic.report, label: "تقرير النشاط", sub: "عدد الزيارات · PDF أو Excel", kbd: "Ctrl R", run: () => ACT.dialog() },
+    { icon: ic.sheet, label: "كشوف البدلات Excel", run: () => IO.exportExcel(currentResult()) },
     "-",
     { icon: ic.dl, label: "نسخة احتياطية", run: () => IO.template(true) },
     { icon: ic.dl, label: "قالب فارغ", run: () => IO.template(false) }
@@ -206,6 +210,7 @@ document.addEventListener("keydown", e => {
   if (e.key === "Escape" && S.editMode) { S.editMode = false; update(); return; }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "o") { e.preventDefault(); document.getElementById("file-input").click(); }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "p" && ENG.M.visits.length) { e.preventDefault(); REPORT.dialog(); }
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "r" && ENG.M.visits.length) { e.preventDefault(); ACT.dialog(); }
   if (e.altKey && /^[1-4]$/.test(e.key) && ENG.M.visits.length) { e.preventDefault(); setTab(["dash", "visits", "people", "prices"][+e.key - 1]); }
 });
 addEventListener("scroll", () => document.body.classList.toggle("scrolled", scrollY > 8), { passive: true });
@@ -214,3 +219,7 @@ loadStore();
 applyTheme();
 rebuild();
 render();
+const BOOT = (location.search + location.hash + " " + (window.ADDAD_BOOT || ""));
+if (/demo/.test(BOOT) && !S.raw.length) IO.demo();
+if (/open=report/.test(BOOT) && ENG.M.visits.length) ACT.dialog();
+if (/open=filters/.test(BOOT) && ENG.M.visits.length) { S.advOpen = true; FILTERS.sync(); }

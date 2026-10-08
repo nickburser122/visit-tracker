@@ -202,5 +202,5 @@ const REPORT = (() => {
     addEventListener("resize", fit);
   }
 
-  return { dialog, printReport, tafqit };
+  return { dialog, printReport, tafqit, header, footer, arabicDigits };
 })();

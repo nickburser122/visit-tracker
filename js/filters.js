@@ -1,42 +1,47 @@
 const FILTERS = (() => {
-  const { esc, icons } = UI;
-  const PUR = [["plan", "خطة المرور"], ["insp", "فحص"], ["other", "أخرى"]];
-  const CAR = [["nocar", "بدون سيارة"], ["car", "بالسيارة"]];
+  const { esc, icons, fm } = UI;
+  const CAR = [["nocar", "بدون سيارة"], ["car", "بسيارة الهيئة"]];
   const ZONE = [["out", "خارج دمنهور"], ["in", "داخل دمنهور"]];
-  const AMT = [["pos", "له مبلغ"], ["zero", "صفر"], ["miss", "بلا سعر"]];
-  const LBL = Object.fromEntries([...PUR, ...CAR, ...ZONE, ...AMT]);
+  const AMT = [["pos", "له مبلغ"], ["zero", "بلا مبلغ"], ["miss", "بلا سعر"]];
+  const LBL = Object.fromEntries([...CAR, ...ZONE, ...AMT]);
   const KIND_L = Object.fromEntries(ENG.KINDS);
-  let root, ctrls = {}, lastMonth = null;
+  const KIND_F = { travel: "أجرة الانتقال", allow: "بدل سفر", class: "بدل داخلي", service: "سيرفيس دمنهور" };
+  const LIMIT = 8;
+  let root, ctrls = {}, lastMonth = null, fcache = { k: "", v: null };
 
-  const metaOpts = key => () => Object.entries(ENG.M.meta[key]).map(([v, o]) => ({ v, l: o.l, sub: o.n })).sort((a, b) => b.sub - a.sub);
-  const OPTS = {
-    people: metaOpts("people"),
-    cities: metaOpts("cities"),
-    types: metaOpts("types"),
-    ents: metaOpts("ents"),
-    bands: () => ENG.BANDS.filter(b => ENG.M.meta.bands[b]).map(b => ({ v: b, l: ENG.bandLabel(b), sub: ENG.M.meta.bands[b].n })),
-    kinds: () => { const n = {}; for (const it of ENG.M.items) for (const k of new Set(it.ls.map(l => l.kind))) n[k] = (n[k] || 0) + 1; return ENG.KINDS.filter(([k]) => n[k]).map(([k, l]) => ({ v: k, l, sub: n[k] })); }
-  };
+  const metaList = key => Object.entries(ENG.M.meta[key]).map(([v, o]) => ({ v, l: o.l, n: o.n }));
+  const purpOpts = () => metaList("purp").sort((a, b) => (b.v === "plan") - (a.v === "plan") || b.n - a.n);
+  const fixed = list => () => list.map(([v, l]) => ({ v, l }));
+  const GROUPS = [
+    { k: "purp", l: "الغرض", icon: "spark", opts: purpOpts },
+    { k: "car", l: "الانتقال", icon: "car", opts: fixed(CAR) },
+    { k: "zone", l: "النطاق", icon: "pin", opts: fixed(ZONE) },
+    { k: "people", l: "الأفراد", icon: "user", opts: () => metaList("people").sort((a, b) => b.n - a.n), wide: true },
+    { k: "amt", l: "المبلغ", icon: "coin", opts: fixed(AMT) },
+    { k: "kinds", l: "نوع البند", icon: "list", opts: () => ENG.KINDS.map(([v, l]) => ({ v, l: KIND_F[v] || l })) },
+    { k: "types", l: "نوع الجهة", icon: "building", opts: () => metaList("types").sort((a, b) => b.n - a.n) },
+    { k: "bands", l: "المسافة", icon: "route", opts: () => ENG.BANDS.filter(b => ENG.M.meta.bands[b]).map(b => ({ v: b, l: ENG.bandLabel(b) })) },
+    { k: "cities", l: "المدينة", icon: "pin", opts: () => metaList("cities").sort((a, b) => b.n - a.n) },
+    { k: "ents", l: "الجهة", icon: "building", opts: () => metaList("ents").sort((a, b) => b.n - a.n), wide: true }
+  ];
+  const GK = Object.fromEntries(GROUPS.map(g => [g.k, g]));
+  const KEYS = GROUPS.map(g => g.k);
+
+  function counts() {
+    const k = ver + "|" + JSON.stringify(S.filters) + "|" + S.excl.join(",");
+    if (fcache.k !== k) fcache = { k, v: ENG.facets(S.filters) };
+    return fcache.v;
+  }
+  function labelOf(k, v) {
+    if (k === "kinds") return KIND_F[v] || KIND_L[v] || v;
+    if (k === "bands") return ENG.bandLabel(v);
+    if (LBL[v] && (k === "car" || k === "zone" || k === "amt")) return LBL[v];
+    const m = ENG.M.meta[k];
+    return m && m[v] ? m[v].l : v;
+  }
 
   function changed() { saveUi(); sync(); update(); }
-
-  function segMulti(key, items, label) {
-    const el = document.createElement("div");
-    el.className = "seg";
-    el.setAttribute("role", "group");
-    el.setAttribute("aria-label", label);
-    el.innerHTML = items.map(([k, l]) => '<button type="button" data-v="' + k + '">' + l + "</button>").join("");
-    el.onclick = e => {
-      const b = e.target.closest("[data-v]");
-      if (!b) return;
-      const s = new Set(S.filters[key]);
-      s.has(b.dataset.v) ? s.delete(b.dataset.v) : s.add(b.dataset.v);
-      S.filters[key] = s.size === items.length ? [] : [...s];
-      changed();
-    };
-    el.sync = () => el.querySelectorAll("[data-v]").forEach(b => b.setAttribute("aria-pressed", String(S.filters[key].includes(b.dataset.v))));
-    return el;
-  }
+  function toggle(k, v) { const s = new Set(S.filters[k]); s.has(v) ? s.delete(v) : s.add(v); S.filters[k] = [...s]; changed(); }
 
   function strip() {
     const el = document.createElement("div");
@@ -49,8 +54,7 @@ const FILTERS = (() => {
       const mb = e.target.closest("[data-m]");
       if (!yr && !mb) return;
       const months = Object.keys(ENG.M.meta.months).sort();
-      const ranged = !!(f.from || f.to);
-      const sel = new Set(ranged ? [] : f.months);
+      const sel = new Set(f.from || f.to ? [] : f.months);
       f.from = f.to = "";
       if (yr) {
         const ym = months.filter(m => m.startsWith(yr.dataset.y));
@@ -59,7 +63,7 @@ const FILTERS = (() => {
       } else {
         const k = mb.dataset.m;
         if (e.shiftKey && lastMonth) { const [a, z] = [lastMonth, k].sort(); months.filter(m => m >= a && m <= z).forEach(m => sel.add(m)); }
-        else if (e.ctrlKey || e.metaKey || sel.size > 1 || (sel.size === 1 && !sel.has(k) && e.altKey)) sel.has(k) ? sel.delete(k) : sel.add(k);
+        else if (e.ctrlKey || e.metaKey || sel.size > 1) sel.has(k) ? sel.delete(k) : sel.add(k);
         else if (sel.size === 1 && sel.has(k)) sel.clear();
         else { sel.clear(); sel.add(k); }
         lastMonth = k;
@@ -91,11 +95,7 @@ const FILTERS = (() => {
       const prev = el.scrollLeft, first = !el.dataset.ready;
       el.innerHTML = h;
       el.dataset.ready = "1";
-      if (first) requestAnimationFrame(() => {
-        const t = el.querySelector('.mchip[aria-pressed="true"]') || [...el.querySelectorAll(".mchip[data-m]")].pop();
-        if (t) el.scrollTo({ left: el.scrollLeft + t.getBoundingClientRect().left - el.getBoundingClientRect().left - el.clientWidth / 2 + t.offsetWidth / 2, behavior: "instant" });
-        edge();
-      });
+      if (first) requestAnimationFrame(() => el.center());
       else { el.scrollLeft = prev; edge(); }
     };
     const edge = () => {
@@ -128,7 +128,6 @@ const FILTERS = (() => {
     w.querySelectorAll(".p-step").forEach(s => s.onclick = () => { if (PICKER.step(+s.dataset.s)) { lastMonth = null; changed(); } });
     w.sync = () => {
       const f = S.filters, on = !!(f.from || f.to || f.months.length);
-      w.classList.toggle("has", on);
       b.classList.toggle("has", on);
       b.innerHTML = icons.cal + '<span class="pl"><small>الفترة</small><b>' + esc(PICKER.label()) + "</b></span>" + '<span class="car">' + icons.chevD + "</span>";
       w.querySelectorAll(".p-step").forEach(s => s.disabled = !PICKER.canStep(+s.dataset.s));
@@ -141,15 +140,9 @@ const FILTERS = (() => {
     if (!nq) return [];
     const out = [];
     const add = (kind, label, v, l, sub) => { const z = NZ(l); if (z.includes(nq)) out.push({ kind, label, v, l, sub, rank: z.startsWith(nq) ? 0 : z.split(" ").some(w => w.startsWith(nq)) ? 1 : 2 }); };
-    const L = { people: "فرد", ents: "جهة", cities: "مدينة", types: "نوع", bands: "المسافة" };
-    for (const k of Object.keys(L)) OPTS[k]().forEach(o => add(k, L[k], o.v, o.l, o.sub + " زيارة"));
-    PUR.forEach(([k, l]) => add("pur", "الغرض", k, l));
-    AMT.forEach(([k, l]) => add("amt", "المبلغ", k, l));
-    ENG.KINDS.forEach(([k, l]) => add("kinds", "البند", k, l));
-    ZONE.forEach(([k, l]) => add("zone", "النطاق", k, l));
-    CAR.forEach(([k, l]) => add("car", "السيارة", k, l));
+    for (const g of GROUPS) g.opts().forEach(o => add(g.k, g.l, o.v, o.l, o.n ? o.n + " زيارة" : ""));
     Object.keys(ENG.M.meta.months).sort().reverse().forEach(k => add("months", "شهر", k, UI.mlabel(k), ENG.M.meta.months[k].n + " زيارة"));
-    const order = { people: 0, ents: 1, cities: 2, months: 3 };
+    const order = { people: 0, purp: 1, ents: 2, cities: 3, months: 4 };
     out.sort((a, b) => a.rank - b.rank || (order[a.kind] ?? 5) - (order[b.kind] ?? 5));
     const res = out.slice(0, 12);
     res.push({ kind: "q", label: "نص", v: q, l: "كل ما يحتوي «" + q + "»" });
@@ -166,7 +159,7 @@ const FILTERS = (() => {
   function omni() {
     const wrap = document.createElement("div");
     wrap.className = "omni";
-    wrap.innerHTML = icons.search + '<input type="search" id="omni-input" placeholder="بحث…" autocomplete="off" enterkeyhint="search" aria-label="بحث سريع"><kbd>/</kbd>';
+    wrap.innerHTML = icons.search + '<input type="search" id="omni-input" placeholder="ابحث عن فرد، جهة، غرض، مدينة…" autocomplete="off" enterkeyhint="search" aria-label="بحث سريع"><kbd>/</kbd>';
     const inp = wrap.querySelector("input");
     let hl = 0, list = [];
     const draw = () => {
@@ -175,7 +168,7 @@ const FILTERS = (() => {
       hl = Math.min(hl, list.length - 1);
       const p = UI.isOpen(wrap) ? UI.popBody() : UI.open(wrap, "", { cls: "dd-pop omni-pop", min: 340, sheet: false });
       if (!p) return;
-      p.innerHTML = '<div class="dd-list" role="listbox">' + list.map((s, i) => '<div class="dd-opt omni-opt' + (i === hl ? " hl" : "") + '" role="option" data-i="' + i + '"><span class="kind">' + esc(s.label) + '</span><span class="t">' + esc(s.l) + "</span>" + (s.sub ? '<span class="sub">' + esc(s.sub) + "</span>" : "") + "</div>").join("") + '</div>';
+      p.innerHTML = '<div class="dd-list" role="listbox">' + list.map((s, i) => '<div class="dd-opt omni-opt' + (i === hl ? " hl" : "") + '" role="option" data-i="' + i + '"><span class="kind">' + esc(s.label) + '</span><span class="t">' + esc(s.l) + "</span>" + (s.sub ? '<span class="sub">' + esc(s.sub) + "</span>" : "") + "</div>").join("") + "</div>";
       UI.place();
       p.querySelector(".hl")?.scrollIntoView({ block: "nearest" });
       p.onpointerdown = e => e.preventDefault();
@@ -196,27 +189,76 @@ const FILTERS = (() => {
   function popLast() {
     const f = S.filters;
     if (f.q) { f.q = ""; return changed(); }
-    for (const k of ["kinds", "amt", "bands", "ents", "types", "cities", "people", "zone", "car", "pur"]) if (f[k].length) { f[k] = f[k].slice(0, -1); return changed(); }
+    for (const k of [...KEYS].reverse()) if (f[k].length) { f[k] = f[k].slice(0, -1); return changed(); }
+  }
+
+  function morePop(anchor, g) {
+    let q = "";
+    const C = counts()[g.k] || {};
+    const all = () => g.opts().map(o => ({ ...o, c: C[o.v] || 0 })).sort((a, b) => b.c - a.c || a.l.localeCompare(b.l, "ar"));
+    const p = UI.open(anchor, '<div class="dd-sw">' + icons.search + '<input class="dd-search" type="search" placeholder="ابحث في ' + esc(g.l) + '…" aria-label="بحث"></div><div class="dd-list" role="listbox" aria-multiselectable="true"></div><div class="dd-foot"><span class="dd-count mut sm"></span><span><button type="button" class="lnk" data-a="clear">مسح</button>' + (UI.mobile() ? '<button type="button" class="btn sm solid" data-sheet-x>تم</button>' : "") + "</span></div>", { cls: "dd-pop", title: g.l, min: 300 });
+    if (!p) return;
+    const box = p.querySelector(".dd-list");
+    const draw = () => {
+      const nq = NZ(q), sel = new Set(S.filters[g.k]);
+      const L = all().filter(o => !nq || NZ(o.l).includes(nq));
+      box.innerHTML = L.length ? L.map(o => '<div class="dd-opt' + (!o.c && !sel.has(o.v) ? " zero" : "") + '" role="option" aria-selected="' + sel.has(o.v) + '" data-v="' + esc(o.v) + '"><span class="tick">' + icons.check + '</span><span class="t">' + esc(o.l) + '</span><span class="sub">' + o.c + "</span></div>").join("") : '<div class="dd-empty">لا نتائج</div>';
+      p.querySelector(".dd-count").textContent = sel.size ? sel.size + " محدد" : "بلا تحديد = الكل";
+    };
+    draw();
+    UI.place();
+    const s = p.querySelector(".dd-search");
+    if (!UI.mobile()) setTimeout(() => s.focus(), 0);
+    s.oninput = () => { q = s.value; draw(); };
+    p.onpointerdown = e => { if (e.target.closest(".dd-opt,.lnk")) e.preventDefault(); };
+    p.onclick = e => {
+      if (e.target.closest('[data-a="clear"]')) { S.filters[g.k] = []; changed(); draw(); return; }
+      const o = e.target.closest(".dd-opt");
+      if (o) { toggle(g.k, o.dataset.v); draw(); }
+    };
+  }
+
+  function board() {
+    const el = document.createElement("div");
+    el.className = "fboard";
+    el.onclick = e => {
+      const c = e.target.closest("[data-fc]");
+      if (c) { toggle(c.dataset.g, c.dataset.fc); return; }
+      const x = e.target.closest("[data-gclear]");
+      if (x) { S.filters[x.dataset.gclear] = []; changed(); return; }
+      const m = e.target.closest("[data-gmore]");
+      if (m) morePop(m, GK[m.dataset.gmore]);
+    };
+    el.sync = () => {
+      const C = counts();
+      el.innerHTML = GROUPS.map(g => {
+        const opts = g.opts();
+        if (!opts.length) return "";
+        const sel = new Set(S.filters[g.k]);
+        const cc = C[g.k] || {};
+        const ranked = opts.map(o => ({ ...o, c: cc[o.v] || 0 }));
+        const big = ranked.length > LIMIT + 1;
+        let shown = ranked;
+        if (big) {
+          const top = [...ranked].sort((a, b) => b.c - a.c).filter(o => !sel.has(o.v)).slice(0, Math.max(0, LIMIT - sel.size));
+          shown = [...ranked.filter(o => sel.has(o.v)), ...top];
+        }
+        const rest = ranked.length - shown.length;
+        return '<section class="fgroup' + (g.wide ? " wide" : "") + (sel.size ? " on" : "") + '" aria-label="' + esc(g.l) + '"><header><span class="fg-ic">' + (icons[g.icon] || "") + "</span><b>" + esc(g.l) + "</b>" + (sel.size ? '<span class="fg-n">' + sel.size + '</span><button type="button" class="fg-x" data-gclear="' + g.k + '">مسح</button>' : "") + '</header><div class="fchips">' +
+          shown.map(o => '<button type="button" class="fchip' + (!o.c && !sel.has(o.v) ? " zero" : "") + '" data-g="' + g.k + '" data-fc="' + esc(o.v) + '" aria-pressed="' + sel.has(o.v) + '"><span>' + esc(o.l) + "</span><small>" + o.c + "</small></button>").join("") +
+          (big ? '<button type="button" class="fchip more" data-gmore="' + g.k + '">' + icons.search + "<span>" + (rest > 0 ? "+" + rest : "الكل") + "</span></button>" : "") + "</div></section>";
+      }).join("") + '<p class="fboard-hint">' + icons.info + "<span>داخل المجموعة الواحدة: <b>أيٌّ منها</b> · بين المجموعات: <b>جميعها معاً</b> · الرقم بجوار كل خيار = عدد الزيارات لو أضفته</span></p>";
+    };
+    return el;
   }
 
   function chips() {
-    const f = S.filters, out = [], meta = ENG.M.meta;
-    const nm = (k, v) => (meta[k][v] || { l: v }).l;
-    f.people.forEach(v => out.push(["people", v, "فرد", nm("people", v)]));
-    f.ents.forEach(v => out.push(["ents", v, "جهة", nm("ents", v)]));
-    f.cities.forEach(v => out.push(["cities", v, "مدينة", nm("cities", v)]));
-    f.types.forEach(v => out.push(["types", v, "نوع", v]));
-    f.bands.forEach(v => out.push(["bands", v, "المسافة", ENG.bandLabel(v)]));
-    f.pur.forEach(v => out.push(["pur", v, "الغرض", LBL[v]]));
-    f.car.forEach(v => out.push(["car", v, "السيارة", LBL[v]]));
-    f.zone.forEach(v => out.push(["zone", v, "النطاق", LBL[v]]));
-    f.amt.forEach(v => out.push(["amt", v, "المبلغ", LBL[v]]));
-    f.kinds.forEach(v => out.push(["kinds", v, "البند", KIND_L[v]]));
+    const f = S.filters, out = [];
+    for (const g of GROUPS) f[g.k].forEach(v => out.push([g.k, v, g.l, labelOf(g.k, v)]));
     if (f.q) out.push(["q", "", "نص", "«" + f.q + "»"]);
     return out;
   }
-  const ADV = ["pur", "car", "zone", "amt", "kinds", "people", "cities", "types", "bands", "ents"];
-  const advCount = () => { const f = S.filters; return ADV.reduce((s, k) => s + f[k].length, 0); };
+  const advCount = () => KEYS.reduce((s, k) => s + S.filters[k].length, 0);
 
   function mount(el) {
     root = el;
@@ -237,23 +279,9 @@ const FILTERS = (() => {
     sw.className = "mstrip-wrap";
     sw.appendChild(ctrls.strip);
     r0.append(sw);
-    ctrls.pur = segMulti("pur", PUR, "الغرض");
-    ctrls.car = segMulti("car", CAR, "السيارة");
-    ctrls.zone = segMulti("zone", ZONE, "النطاق");
-    ctrls.amt = segMulti("amt", AMT, "المبلغ");
-    const segs = document.createElement("div"); segs.className = "f-segs";
-    [ctrls.pur, ctrls.car, ctrls.zone, ctrls.amt].forEach(s => segs.appendChild(s));
-    const dds = document.createElement("div"); dds.className = "f-dds";
-    const mk = (label, key) => UI.multi({ label, value: S.filters[key], options: OPTS[key], onChange: v => { S.filters[key] = v; saveUi(); syncChips(); paintToggle(); update(); } });
-    ctrls.people = mk("الأفراد", "people");
-    ctrls.ents = mk("الجهة", "ents");
-    ctrls.cities = mk("المدينة", "cities");
-    ctrls.types = mk("نوع الجهة", "types");
-    ctrls.bands = mk("المسافة", "bands");
-    ctrls.kinds = mk("البند", "kinds");
-    [ctrls.people, ctrls.ents, ctrls.cities, ctrls.types, ctrls.bands, ctrls.kinds].forEach(b => dds.appendChild(b));
+    ctrls.board = board();
     const inner = document.createElement("div"); inner.className = "f-adv-in";
-    inner.append(segs, dds);
+    inner.append(ctrls.board);
     adv.append(inner);
     root.append(r1, r0, adv, r2);
     ctrls.adv = adv;
@@ -264,18 +292,21 @@ const FILTERS = (() => {
       const k = c.dataset.k, v = c.dataset.v;
       if (k === "__all") { const snap = JSON.stringify(S.filters); resetFilters(); changed(); UI.toast("تم المسح", { action: "تراجع", onAction: () => { S.filters = JSON.parse(snap); changed(); } }); return; }
       if (k === "__excl") { const snap = S.excl; S.excl = []; saveUi(); update(); UI.toast("أُعيدت كل البنود المستبعدة", { action: "تراجع", onAction: () => { S.excl = snap; saveUi(); update(); } }); return; }
+      if (k === "__report") { ACT.dialog(); return; }
       if (k === "q") S.filters.q = "";
       else S.filters[k] = S.filters[k].filter(x => x !== v);
       changed();
     };
-    if (S.advOpen == null || UI.mobile()) S.advOpen = !UI.mobile();
+    if (S.advOpen == null) S.advOpen = !UI.mobile();
+    if (UI.mobile()) S.advOpen = false;
     sync();
   }
 
   function paintToggle() {
     const n = advCount();
-    ctrls.toggle.innerHTML = icons.sliders + '<span class="ft-l">تصفية</span>' + (n ? '<span class="badge">' + n + "</span>" : "");
+    ctrls.toggle.innerHTML = icons.sliders + '<span class="ft-l">التصفية</span>' + (n ? '<span class="badge">' + n + "</span>" : "") + '<span class="car">' + icons.chevD + "</span>";
     ctrls.toggle.classList.toggle("has", n > 0);
+    ctrls.toggle.classList.toggle("open", !!S.advOpen);
   }
   function paintAdv(animate) {
     if (!animate) { ctrls.adv.classList.add("still"); requestAnimationFrame(() => requestAnimationFrame(() => ctrls.adv.classList.remove("still"))); }
@@ -286,30 +317,29 @@ const FILTERS = (() => {
 
   function syncChips() {
     if (!ctrls.chips || !ctrls.chips.isConnected) return;
+    ctrls.board.sync();
     const cs = chips();
     const any = cs.length || S.filters.months.length || S.filters.from;
     const R = currentResult();
     const ex = R.excluded.length;
-    ctrls.chips.innerHTML = '<span class="f-count"><b>' + R.visits.length + "</b> زيارة · <b>" + R.items.length + "</b> مشاركة · <b>" + UI.fm(R.total) + "</b> جنيه</span>" + cs.map(([k, v, l, t]) => '<span class="chip"><small>' + esc(l) + "</small>" + esc(t) + '<button type="button" data-k="' + k + '" data-v="' + esc(v) + '" aria-label="إزالة ' + esc(t) + '">' + icons.x + "</button></span>").join("") + (ex ? '<span class="chip warn"><small>مستبعد</small>' + ex + ' مشاركة<button type="button" data-k="__excl" aria-label="إعادة المستبعد">' + icons.x + "</button></span>" : "") + (any ? '<button type="button" class="lnk" data-k="__all">' + icons.reset + "مسح</button>" : "");
+    ctrls.chips.innerHTML = '<span class="f-count"><b>' + R.visits.length + "</b> زيارة · <b>" + R.items.length + "</b> مشاركة · <b>" + fm(R.total) + "</b> جنيه</span>" + cs.map(([k, v, l, t]) => '<span class="chip"><small>' + esc(l) + "</small>" + esc(t) + '<button type="button" data-k="' + k + '" data-v="' + esc(v) + '" aria-label="إزالة ' + esc(t) + '">' + icons.x + "</button></span>").join("") + (ex ? '<span class="chip warn"><small>مستبعد</small>' + ex + ' مشاركة<button type="button" data-k="__excl" aria-label="إعادة المستبعد">' + icons.x + "</button></span>" : "") + (any ? '<button type="button" class="lnk" data-k="__all">' + icons.reset + "مسح الكل</button>" : "") + '<span class="f-sp"></span><button type="button" class="lnk acc" data-k="__report">' + icons.report + "تقرير لهذا العرض</button>";
   }
 
   function sync() {
     if (!root) return;
     ctrls.period.sync();
     ctrls.strip.sync();
-    ["pur", "car", "zone", "amt"].forEach(k => ctrls[k].sync());
-    ["people", "ents", "cities", "types", "bands", "kinds"].forEach(k => ctrls[k].setValue(S.filters[k]));
     paintAdv();
     syncChips();
   }
 
   const mq = matchMedia("(max-width: 639px)");
-  mq.addEventListener("change", () => { if (!root) return; S.advOpen = !mq.matches; paintAdv(); });
+  mq.addEventListener("change", () => { if (!root) return; S.advOpen = false; paintAdv(); });
 
   document.addEventListener("keydown", e => {
     if ((e.key === "[" || e.key === "]") && root && !/INPUT|TEXTAREA/.test(document.activeElement.tagName) && !document.querySelector(".modal") && !e.ctrlKey && !e.metaKey && !e.altKey) { if (PICKER.step(e.key === "]" ? 1 : -1)) { e.preventDefault(); lastMonth = null; changed(); } return; }
     if (e.key === "/" && !/INPUT|TEXTAREA/.test(document.activeElement.tagName) && !document.querySelector(".modal")) { const i = document.getElementById("omni-input"); if (i) { e.preventDefault(); i.focus(); } }
   });
 
-  return { mount, sync, syncChips, LBL, KIND_L };
+  return { mount, sync, syncChips, LBL, KIND_L, GROUPS, labelOf, KEYS };
 })();

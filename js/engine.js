@@ -317,6 +317,11 @@ const ENG = (() => {
     return "other";
   }
 
+  const PURP_PLAN = "plan", PURP_NONE = "none";
+  const purposeKey = (g, cat) => cat === "plan" ? PURP_PLAN : (NZ(g) || PURP_NONE);
+  const purposeLabel = (k, g) => k === PURP_PLAN ? "خطة المرور" : k === PURP_NONE ? "غير محدد" : String(g || "").replace(/\s+/g, " ").trim();
+  const CAT_LABEL = { plan: "خطة المرور", insp: "فحص وشكاوى", other: "أغراض أخرى" };
+
   function personKey(n) { return NZ(n).replace(/^ال/, "").replace(/\s+/g, " "); }
 
   function registerPeople(rows) {
@@ -463,7 +468,7 @@ const ENG = (() => {
       let v = map.get(key);
       if (!v) {
         const rc = resolver(r.ent);
-        v = { id: key, d: r.d, m: r.d.slice(0, 7), ent: r.ent, ek, g: r.g, cat, city: rc.city, type: rc.type, how: rc.how, parts: new Map(), rows: [] };
+        v = { id: key, d: r.d, m: r.d.slice(0, 7), ent: r.ent, ek, g: r.g, cat, pk: purposeKey(r.g, cat), city: rc.city, type: rc.type, how: rc.how, parts: new Map(), rows: [] };
         map.set(key, v);
       }
       v.rows.push(r.src);
@@ -478,7 +483,7 @@ const ENG = (() => {
     }
     const visits = [...map.values()].sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : a.ent.localeCompare(b.ent, "ar"));
     const items = [];
-    const meta = { months: {}, people: {}, cities: {}, types: {}, ents: {}, bands: {}, unknown: {}, days: {} };
+    const meta = { months: {}, people: {}, cities: {}, types: {}, ents: {}, bands: {}, purp: {}, unknown: {}, days: {} };
     const inc = (o, k, l) => { const x = o[k] || (o[k] = { n: 0, l: l == null ? k : l }); x.n++; };
     visits.forEach((v, i) => {
       v.i = i;
@@ -507,6 +512,8 @@ const ENG = (() => {
       inc(meta.types, v.type);
       inc(meta.ents, v.ek, v.ent);
       inc(meta.bands, v.band, bandLabel(v.band));
+      inc(meta.purp, v.pk, purposeLabel(v.pk, v.g));
+      meta.purp[v.pk].cat = v.cat;
       if (!v.city || v.how === "guess" || v.how === "fuzzy") { inc(meta.unknown, v.ek, v.ent); meta.unknown[v.ek].how = v.how; meta.unknown[v.ek].city = v.city; }
     });
     M.visits = visits; M.items = items; M.meta = meta;
@@ -527,8 +534,8 @@ const ENG = (() => {
     const pt = opt.skipPeriod ? null : periodTest(f);
     if (pt) tests.push(pt);
     const set = a => a && a.length ? new Set(a) : null;
-    const pur = set(f.pur), zone = set(f.zone), cities = set(f.cities), types = set(f.types), ents = set(f.ents), bands = set(f.bands);
-    if (pur) tests.push(v => pur.has(v.cat));
+    const purp = set(f.purp), zone = set(f.zone), cities = set(f.cities), types = set(f.types), ents = set(f.ents), bands = set(f.bands);
+    if (purp) tests.push(v => purp.has(v.pk));
     if (zone) tests.push(v => zone.has(v.city === DAMANHOUR ? "in" : "out"));
     if (cities) tests.push(v => cities.has(v.city || "?"));
     if (types) tests.push(v => types.has(v.type));
@@ -537,14 +544,14 @@ const ENG = (() => {
     const q = NZ(f.q || "");
     if (q) tests.push(v => v.s.includes(q));
     const people = set(f.people);
-    const car = f.car && f.car.length === 1 ? f.car[0] : null;
+    const car = set(f.car);
     const amt = set(f.amt), kinds = set(f.kinds);
     const excl = !opt.keepExcl && S.excl && S.excl.length ? new Set(S.excl) : null;
     const items = [], excluded = [];
     const vm = new Map();
     for (const it of M.items) {
       if (people && !people.has(it.p.key)) continue;
-      if (car && (car === "car") !== it.p.car) continue;
+      if (car && !car.has(it.p.car ? "car" : "nocar")) continue;
       if (amt && !amt.has(amtOf(it))) continue;
       if (kinds && !it.ls.some(l => kinds.has(l.kind))) continue;
       const v = it.v;
@@ -577,11 +584,57 @@ const ENG = (() => {
     return { visits, items, persons, total, miss, vm, excluded };
   }
 
+  const FACETS = {
+    purp: it => it.v.pk,
+    car: it => it.p.car ? "car" : "nocar",
+    zone: it => it.v.city === DAMANHOUR ? "in" : "out",
+    amt: it => amtOf(it),
+    kinds: it => [...new Set(it.ls.map(l => l.kind))],
+    people: it => it.p.key,
+    types: it => it.v.type,
+    cities: it => it.v.city || "?",
+    bands: it => it.v.band,
+    ents: it => it.v.ek
+  };
+  const FACET_KEYS = Object.keys(FACETS);
+
+  function facets(f) {
+    const pt = periodTest(f);
+    const q = NZ(f.q || "");
+    const excl = S.excl && S.excl.length ? new Set(S.excl) : null;
+    const sel = {};
+    for (const k of FACET_KEYS) sel[k] = f[k] && f[k].length ? new Set(f[k]) : null;
+    const out = {};
+    for (const k of FACET_KEYS) out[k] = new Map();
+    const add = (k, vals, v) => { const m = out[k]; for (const x of Array.isArray(vals) ? vals : [vals]) { let s = m.get(x); if (!s) m.set(x, s = new Set()); s.add(v); } };
+    for (const it of M.items) {
+      const v = it.v;
+      if (pt && !pt(v)) continue;
+      if (q && !v.s.includes(q)) continue;
+      if (excl && excl.has(it.id)) continue;
+      const vals = {};
+      let miss = null, n = 0;
+      for (const k of FACET_KEYS) {
+        const x = vals[k] = FACETS[k](it);
+        const s = sel[k];
+        if (!s) continue;
+        const ok = Array.isArray(x) ? x.some(y => s.has(y)) : s.has(x);
+        if (!ok) { n++; miss = k; if (n > 1) break; }
+      }
+      if (n > 1) continue;
+      if (n === 1) add(miss, vals[miss], v);
+      else for (const k of FACET_KEYS) add(k, vals[k], v);
+    }
+    const res = {};
+    for (const k of FACET_KEYS) { res[k] = {}; for (const [x, s] of out[k]) res[k][x] = s.size; }
+    return res;
+  }
+
   function nocarCost(v, p) {
     let s = 0;
     for (const l of lines(v, { ...p, car: false })) { if (l.a == null) return null; s += l.a; }
     return s;
   }
 
-  return { M, KINDS, amtOf, nocarCost, analyze, remap, rememberCols, headersOf, mergeRows, build, filter, registerPeople, purposeCat, personKey, toDate, dateParts, splitPeople, BANDS, bandLabel, kmOf, isFar, zeroHit, resolve: e => (resolver || (resolver = makeResolver()))(e), SETTING_SHEETS, HEAD_KEYS: ["d", "e", "g", "p", "c"] };
+  return { M, KINDS, CAT_LABEL, FACET_KEYS, facets, purposeLabel, amtOf, nocarCost, analyze, remap, rememberCols, headersOf, mergeRows, build, filter, registerPeople, purposeCat, personKey, toDate, dateParts, splitPeople, BANDS, bandLabel, kmOf, isFar, zeroHit, resolve: e => (resolver || (resolver = makeResolver()))(e), SETTING_SHEETS, HEAD_KEYS: ["d", "e", "g", "p", "c"] };
 })();

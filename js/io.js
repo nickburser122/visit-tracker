@@ -176,7 +176,7 @@ const IO = (() => {
     S.file = mode === "append" && snap.file ? snap.file + " + " + file : file;
     S.sheet = picked.map(r => r.name).join("، ");
     const snapExcl = S.excl;
-    resetFilters(); S.sel = []; S.vlimit = 200; S.excl = [];
+    resetFilters(); S.vlimit = 200; S.excl = [];
     rebuild(); saveData(); saveUi();
     if (S.tab === "prices") S.tab = "dash";
     render();
@@ -248,13 +248,15 @@ const IO = (() => {
     return b.a ? "من " + UI.dlabel(b.a) + " إلى " + UI.dlabel(b.z) : "";
   }
 
-  function scopeLabel() {
-    const f = S.filters, meta = ENG.M.meta, L = FILTERS.LBL, K = FILTERS.KIND_L;
-    const nm = (k, v) => (meta[k][v] || { l: v }).l;
-    const parts = [];
-    const add = (arr, fn) => { if (arr.length) parts.push(arr.map(fn).join(" أو ")); };
-    add(f.car, v => L[v]); add(f.amt, v => L[v] === "صفر" ? "بلا مبلغ" : L[v]); add(f.kinds, v => K[v]); add(f.zone, v => L[v]); add(f.pur, v => L[v]);
-    add(f.cities, v => nm("cities", v)); add(f.ents, v => nm("ents", v)); add(f.types, v => v); add(f.bands, v => ENG.bandLabel(v));
+  function scopeLabel(withPeople) {
+    const f = S.filters, parts = [];
+    for (const g of FILTERS.GROUPS) {
+      if (g.k === "people" && !withPeople) continue;
+      const a = f[g.k];
+      if (!a.length) continue;
+      const names = a.map(v => FILTERS.labelOf(g.k, v));
+      parts.push(names.length > 3 ? g.l + ": " + names.slice(0, 3).join(" أو ") + " +" + (names.length - 3) : names.join(" أو "));
+    }
     if (f.q) parts.push("«" + f.q + "»");
     if (S.excl.length) { const n = currentResult().excluded.length; if (n) parts.push("مستبعد " + n + " بند"); }
     return parts.join(" · ");
