@@ -18,7 +18,8 @@ const IO = (() => {
       { name: "الافراد", cols: [20, 10], rows: [["الاسم", "الدرجة"], ...Object.values(st.people).sort((a, b) => a.name.localeCompare(b.name, "ar")).map(p => [p.name, p.cls])] },
       { name: "الدرجات", cols: [12, 14, 14], rows: [["الدرجة", "بدل داخلي", "بدل سفر"], ...[1, 2, 3].map(c => [c, st.classAmount[c], st.carAllowance[c]])] },
       { name: "بدون تكلفة", cols: [30], rows: [["الجهة"], ...st.zeroEntities.filter(Boolean).map(z => [z])] },
-      { name: "استثناءات السيرفيس", cols: [30, 12], rows: [["الجهة", "عدد السيرفيس"], ...st.exceptions.filter(x => x.name).map(x => [x.name, x.count])] }
+      { name: "استثناءات السيرفيس", cols: [30, 12], rows: [["الجهة", "عدد السيرفيس"], ...st.exceptions.filter(x => x.name).map(x => [x.name, x.count])] },
+      { name: "خطوط المدن", cols: [22, 22, 12], rows: [["المدينة الأولى", "المدينة الثانية", "السعر"], ...[...new Set([...Object.keys(ENG.M.meta ? ENG.M.meta.pairs : {}), ...Object.keys(st.pairs)])].sort((a, b) => a.localeCompare(b, "ar")).map(k => [...k.split("|"), st.pairs[k] ?? null])] }
     ];
   }
 
@@ -57,6 +58,8 @@ const IO = (() => {
     if (z) out.push({ key: "zero", label: "جهات بدون تكلفة", n: body(z).length, apply: st => { st.zeroEntities = body(z).map(r => String(r[0] || "").trim()).filter(Boolean); } });
     const x = findSheet(sheets, "استثناءات السيرفيس");
     if (x) out.push({ key: "exc", label: "استثناءات السيرفيس", n: body(x).length, apply: st => { st.exceptions = body(x).map(r => ({ name: String(r[0] || "").trim(), count: num(r[1]) || 4 })).filter(o => o.name); } });
+    const q = findSheet(sheets, "خطوط المدن");
+    if (q) out.push({ key: "pairs", label: "الخطوط بين المدن (السعر)", n: body(q).length, apply: st => { for (const r of body(q)) { const a = canonCity(String(r[0] || "").trim()), b = canonCity(String(r[1] || "").trim()), n = num(r[2]); if (!a || !b || a === b || n == null || n < 0) continue; st.pairs[pairKey(a, b)] = n; } } });
     return out;
   }
 

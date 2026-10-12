@@ -239,7 +239,7 @@ const ENG = (() => {
     return { rows: out, stat };
   }
 
-  const SETTING_SHEETS = ["المدن", "الافراد", "الجهات", "بدون تكلفه", "الدرجات", "استثناءات السيرفيس"].map(NZ);
+  const SETTING_SHEETS = ["المدن", "الافراد", "الجهات", "بدون تكلفه", "الدرجات", "استثناءات السيرفيس", "خطوط المدن"].map(NZ);
 
   const fingerprint = (rows, hdr) => hdr < 0 ? "" : (rows[hdr] || []).map(c => NZ(c)).join("|");
   function rememberCols(res) {
@@ -427,9 +427,13 @@ const ENG = (() => {
   }
 
   const CLS_NAME = ["", "الأولى", "الثانية", "الثالثة"];
-  function lines(v, p) {
+  const ONCE_NOTE = "داخلي مصروف مرة واحدة في اليوم";
+  const kmText = v => v.km == null || v.city === DAMANHOUR ? "" : v.km + " كم";
+  const isTrip = v => !v.zero && v.city && v.city !== DAMANHOUR && S.settings.prices[v.city] != null;
+
+  function lines(v, p, trip) {
     const st = S.settings;
-    const kmT = v.km == null || v.city === DAMANHOUR ? "" : v.km + " كم";
+    const kmT = kmText(v);
     const to = "من دمنهور إلى " + v.ent;
     if (v.zero) return [{ t: to + (v.city === DAMANHOUR ? " (بدمنهور)" : " والعودة"), note: "جهة بدون تكلفة", a: 0, kind: "zero" }];
     if (v.city === DAMANHOUR) {
@@ -445,9 +449,88 @@ const ENG = (() => {
     }
     const price = v.city ? st.prices[v.city] : null;
     return [
-      { t: to + " والعودة", note: (price == null ? "سعر غير محدد" : UI.fm(price) + " × 2") + (kmT ? " · " + kmT : ""), q: 2, a: price == null ? null : price * 2, kind: "travel" },
+      ...(trip || [{ t: to + " والعودة", note: (price == null ? "سعر غير محدد" : UI.fm(price) + " × 2") + (kmT ? " · " + kmT : ""), q: 2, a: price == null ? null : price * 2, kind: "travel" }]),
       { t: v.ent + " داخلي", note: "الدرجة " + CLS_NAME[p.cls], a: st.classAmount[p.cls], kind: "class" }
     ];
+  }
+
+  function tripLines(ch, i) {
+    const st = S.settings, v = ch[i].v, pr = st.prices[v.city], kmT = kmText(v);
+    const out = [];
+    if (i === 0) out.push({ t: "من دمنهور إلى " + v.ent, note: UI.fm(pr) + (kmT ? " · " + kmT : ""), q: 1, a: pr, kind: "travel" });
+    else {
+      const u = ch[i - 1].v, t = "من " + u.ent + " إلى " + v.ent;
+      if (u.city === v.city) out.push({ t, note: "نفس المدينة · لا انتقال بين المدن", a: 0, kind: "travel" });
+      else {
+        const pair = pairKey(u.city, v.city), set = st.pairs[pair];
+        out.push(set != null
+          ? { t, note: UI.fm(set) + " · الخط بين " + u.city + " و" + v.city, a: set, kind: "travel", pair }
+          : { t, note: "تقدير بسعر دمنهور إلى " + v.city + " · حدّد سعر الخط بين " + u.city + " و" + v.city, a: pr, kind: "travel", pair, est: true });
+      }
+    }
+    if (i === ch.length - 1) out.push({ t: "من " + v.ent + " إلى دمنهور", note: UI.fm(pr) + (kmT ? " · " + kmT : ""), q: 1, a: pr, kind: "travel" });
+    return out;
+  }
+
+  function solve(stops, noCar) {
+    const st = S.settings, res = new Map();
+    const eff = s => noCar && s.p.car ? { ...s.p, car: false } : s.p;
+    const trip = new Map();
+    if (st.chainTrips) {
+      const ch = stops.filter(s => !eff(s).car && isTrip(s.v));
+      if (ch.length > 1) ch.forEach((s, i) => trip.set(s.v, tripLines(ch, i)));
+    }
+    let paid = false;
+    for (const s of stops) {
+      let ls = lines(s.v, eff(s), trip.get(s.v));
+      if (st.internalOnce) ls = ls.map(l => l.kind !== "class" ? l : paid ? { ...l, a: 0, once: true, note: ONCE_NOTE } : (paid = true, l));
+      res.set(s.v, ls);
+    }
+    return res;
+  }
+
+  const total = ls => { let s = 0; for (const l of ls) { if (l.a == null) return null; s += l.a; } return s; };
+
+  function dayPlans(legs, pairs) {
+    const groups = new Map();
+    for (const v of legs) for (const p of v.people) {
+      const k = p.key + "|" + v.d;
+      let g = groups.get(k);
+      if (!g) groups.set(k, g = []);
+      g.push({ v, p });
+    }
+    const mark = (res, d) => {
+      for (const ls of res.values()) for (const l of ls) {
+        if (!l.pair) continue;
+        let o = pairs[l.pair];
+        if (!o) { const [a, b] = l.pair.split("|"); o = pairs[l.pair] = { a, b, days: new Set(), est: !!l.est }; }
+        o.days.add(d);
+      }
+    };
+    const out = new Map();
+    for (const [k, g] of groups) {
+      g.sort((a, b) => a.v.ord - b.v.ord);
+      const act = solve(g, false);
+      const plan = { act, altOf: null };
+      mark(act, g[0].v.d);
+      const fc = g.findIndex(s => s.p.car);
+      if (fc >= 0) {
+        const alt = solve(g, true);
+        mark(alt, g[0].v.d);
+        const altOf = new Map();
+        let adj = 0, adjMiss = false;
+        g.forEach(s => {
+          const a = total(alt.get(s.v));
+          altOf.set(s.v, a);
+          if (!s.p.car) { const b = total(act.get(s.v)); if (a == null || b == null) adjMiss = true; else adj += a - b; }
+        });
+        const f = g[fc].v, base = altOf.get(f);
+        altOf.set(f, adjMiss || base == null ? null : base + adj);
+        plan.altOf = altOf;
+      }
+      out.set(k, plan);
+    }
+    return out;
   }
 
   const M = { visits: [], items: [], meta: null };
@@ -459,7 +542,8 @@ const ENG = (() => {
     const pk = {};
     for (const k of Object.keys(st.people)) pk[personKey(k)] = k;
     const map = new Map(), seen = new Map();
-    for (const r of raw) {
+    for (let ri = 0; ri < raw.length; ri++) {
+      const r = raw[ri];
       const cat = purposeCat(r.g);
       const ek = NZ(r.ent);
       let key = r.d + "|" + ek + "|" + (cat === "plan" ? cat : NZ(r.g) || cat);
@@ -467,7 +551,7 @@ const ENG = (() => {
       let v = map.get(key);
       if (!v) {
         const rc = resolver(r.ent);
-        v = { id: key, d: r.d, m: r.d.slice(0, 7), ent: r.ent, ek, g: r.g, cat, pk: purposeKey(r.g, cat), city: rc.city, type: rc.type, how: rc.how, parts: new Map(), rows: [] };
+        v = { id: key, d: r.d, m: r.d.slice(0, 7), ent: r.ent, ek, g: r.g, cat, pk: purposeKey(r.g, cat), city: rc.city, type: rc.type, how: rc.how, ord: ri, parts: new Map(), rows: [] };
         map.set(key, v);
       }
       v.rows.push(r.src);
@@ -482,7 +566,7 @@ const ENG = (() => {
     }
     const legs = [...map.values()].sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : a.ent.localeCompare(b.ent, "ar"));
     const items = [];
-    const meta = { months: {}, people: {}, cities: {}, types: {}, ents: {}, bands: {}, purp: {}, unknown: {}, days: {} };
+    const meta = { months: {}, people: {}, cities: {}, types: {}, ents: {}, bands: {}, purp: {}, unknown: {}, days: {}, pairs: {}, pend: 0 };
     const inc = (o, k, l) => { const x = o[k] || (o[k] = { n: 0, l: l == null ? k : l }); x.n++; };
     const gmap = new Map();
     legs.forEach((v, i) => {
@@ -502,15 +586,20 @@ const ENG = (() => {
       v.zero = ZS.has(v.ek);
       v.band = bandOf(v.city, v.km, v.far);
       v.s = NZ(v.ent + " " + (v.city || "") + " " + v.g + " " + v.type + " " + v.people.map(p => p.name).join(" "));
-      v.sum = 0; v.miss = 0;
+    });
+    const plans = dayPlans(legs, meta.pairs);
+    for (const o of Object.values(meta.pairs)) { o.n = o.days.size; delete o.days; if (o.est) meta.pend++; }
+    legs.forEach(v => {
+      v.sum = 0; v.miss = 0; v.est = 0;
       for (const p of v.people) {
-        const ls = lines(v, p);
-        let sum = 0, miss = 0;
+        const pl = plans.get(p.key + "|" + v.d);
+        const ls = pl.act.get(v);
+        let sum = 0, miss = 0, est = 0;
         const k = { travel: 0, class: 0, service: 0, allow: 0 };
-        for (const l of ls) { if (l.a == null) miss++; else { sum += l.a; if (l.kind in k) k[l.kind] += l.a; } }
-        const alt = p.car ? nocarCost(v, p) : (miss ? null : sum);
-        items.push({ id: v.id + "|" + p.key, v, p, ls, sum, miss, k, alt, save: p.car && alt != null ? alt - sum : 0 });
-        v.sum += sum; v.miss += miss;
+        for (const l of ls) { if (l.est) est++; if (l.a == null) miss++; else { sum += l.a; if (l.kind in k) k[l.kind] += l.a; } }
+        const alt = p.car ? pl.altOf.get(v) : (miss ? null : sum);
+        items.push({ id: v.id + "|" + p.key, v, p, ls, sum, miss, est, k, alt, save: p.car && alt != null ? alt - sum : 0 });
+        v.sum += sum; v.miss += miss; v.est += est;
         inc(meta.people, p.key, p.name);
       }
       inc(meta.cities, v.city || "?", v.city || "غير معروفة");
@@ -533,6 +622,7 @@ const ENG = (() => {
       G.rows = G.legs.reduce((s, v) => s + v.rows.length, 0);
       G.sum = G.legs.reduce((s, v) => s + v.sum, 0);
       G.miss = G.legs.reduce((s, v) => s + v.miss, 0);
+      G.est = G.legs.reduce((s, v) => s + v.est, 0);
       meta.days[G.d] = (meta.days[G.d] || 0) + 1;
       inc(meta.months, G.m);
       inc(meta.purp, G.pk, purposeLabel(G.pk, G.g));
@@ -585,19 +675,19 @@ const ENG = (() => {
       if (excl && excl.has(it.id)) { excluded.push(it); continue; }
       items.push(it);
       let o = vm.get(v.V);
-      if (!o) vm.set(v.V, o = { sum: 0, miss: 0, keys: new Set(), legs: new Set(), n: 0, car: 0 });
-      o.sum += it.sum; o.miss += it.miss; o.keys.add(it.p.key); o.legs.add(v); o.n++; if (it.p.car) o.car++;
+      if (!o) vm.set(v.V, o = { sum: 0, miss: 0, est: 0, keys: new Set(), legs: new Set(), n: 0, car: 0 });
+      o.sum += it.sum; o.miss += it.miss; o.est += it.est; o.keys.add(it.p.key); o.legs.add(v); o.n++; if (it.p.car) o.car++;
     }
     const visits = [...vm.keys()].sort((a, b) => a.i - b.i);
     const legs = [...new Set(items.map(it => it.v))];
     const pm = new Map();
     for (const it of items) {
       let o = pm.get(it.p.key);
-      if (!o) pm.set(it.p.key, o = { key: it.p.key, name: it.p.name, cls: it.p.cls, items: [], vset: new Set(), visits: 0, sum: 0, miss: 0, car: 0, nocar: 0, zero: 0, plan: 0, insp: 0, other: 0, km: 0, far: 0, carSum: 0, alt: 0, save: 0, altMiss: 0, k: { travel: 0, class: 0, service: 0, allow: 0 } });
+      if (!o) pm.set(it.p.key, o = { key: it.p.key, name: it.p.name, cls: it.p.cls, items: [], vset: new Set(), visits: 0, sum: 0, miss: 0, est: 0, car: 0, nocar: 0, zero: 0, plan: 0, insp: 0, other: 0, km: 0, far: 0, carSum: 0, alt: 0, save: 0, altMiss: 0, k: { travel: 0, class: 0, service: 0, allow: 0 } });
       o.items.push(it);
       if (!o.vset.has(it.v.V)) { o.vset.add(it.v.V); o[it.v.cat]++; }
       if (it.p.car) { o.carSum += it.sum; if (it.alt == null) o.altMiss++; else { o.alt += it.alt; o.save += it.save; } }
-      o.sum += it.sum; o.miss += it.miss;
+      o.sum += it.sum; o.miss += it.miss; o.est += it.est;
       if (!it.miss && it.sum === 0) o.zero++;
       o[it.p.car ? "car" : "nocar"]++;
       o.km += (it.v.km || 0) * 2;
@@ -606,9 +696,9 @@ const ENG = (() => {
     }
     for (const o of pm.values()) o.visits = o.vset.size;
     const persons = [...pm.values()].sort((a, b) => b.sum - a.sum || b.items.length - a.items.length);
-    let total = 0, miss = 0;
-    for (const it of items) { total += it.sum; miss += it.miss; }
-    return { visits, legs, items, persons, total, miss, vm, excluded };
+    let total = 0, miss = 0, est = 0;
+    for (const it of items) { total += it.sum; miss += it.miss; est += it.est; }
+    return { visits, legs, items, persons, total, miss, est, vm, excluded };
   }
 
   const FACETS = {
@@ -657,11 +747,5 @@ const ENG = (() => {
     return res;
   }
 
-  function nocarCost(v, p) {
-    let s = 0;
-    for (const l of lines(v, { ...p, car: false })) { if (l.a == null) return null; s += l.a; }
-    return s;
-  }
-
-  return { M, KINDS, CAT_LABEL, FACET_KEYS, facets, purposeLabel, amtOf, nocarCost, analyze, remap, rememberCols, headersOf, mergeRows, build, filter, registerPeople, purposeCat, personKey, toDate, dateParts, splitPeople, BANDS, bandLabel, kmOf, isFar, zeroHit, resolve: e => (resolver || (resolver = makeResolver()))(e), SETTING_SHEETS, HEAD_KEYS: ["d", "e", "g", "p", "c"] };
+  return { M, KINDS, CAT_LABEL, FACET_KEYS, facets, purposeLabel, amtOf, analyze, remap, rememberCols, headersOf, mergeRows, build, filter, registerPeople, purposeCat, personKey, toDate, dateParts, splitPeople, BANDS, bandLabel, kmOf, isFar, zeroHit, resolve: e => (resolver || (resolver = makeResolver()))(e), SETTING_SHEETS, HEAD_KEYS: ["d", "e", "g", "p", "c"] };
 })();

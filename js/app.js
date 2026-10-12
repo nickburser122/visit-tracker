@@ -25,6 +25,7 @@ function loadStore() {
         zeroEntities: Array.isArray(s.zeroEntities) ? s.zeroEntities : base.zeroEntities,
         classAmount: { ...base.classAmount, ...(s.classAmount || {}) },
         carAllowance: { ...base.carAllowance, ...(s.carAllowance || {}) },
+        pairs: Object.fromEntries(Object.entries(s.pairs && typeof s.pairs === "object" ? s.pairs : {}).filter(([k, n]) => k.includes("|") && typeof n === "number" && n >= 0)),
         org: { ...base.org, ...(s.org || {}) },
         entities: s.entities || {},
         people: { ...base.people, ...(s.people || {}) } };
@@ -134,7 +135,7 @@ function renderTabs(has) {
   const tabs = document.getElementById("main-tabs");
   tabs.classList.toggle("hidden", !has);
   if (!has) { tabs.innerHTML = ""; return; }
-  const unk = Object.values(ENG.M.meta.unknown).filter(o => !o.city).length;
+  const unk = Object.values(ENG.M.meta.unknown).filter(o => !o.city).length + ENG.M.meta.pend;
   const T = [["dash", "المؤشرات"], ["visits", "الزيارات", ENG.M.visits.length], ["people", "الأفراد", Object.keys(ENG.M.meta.people).length], ["prices", "الإعدادات", unk || null, unk ? "warn" : ""]];
   if (!tabs.querySelector(".tab-ink")) {
     tabs.innerHTML = T.map(([k], i) => '<button class="tab" role="tab" data-tab="' + k + '" title="Alt+' + (i + 1) + '"></button>').join("") + '<span class="tab-ink" aria-hidden="true"></span>';

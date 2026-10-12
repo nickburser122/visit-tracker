@@ -10,6 +10,19 @@ Works out travel allowances (بدلات المرور) from the inspection-visits
   - Car use stays per activity. A visit is "mixed" when only part of the team or part of its rows used the car.
 - **Saving by car:** the cost of a car activity if it had been done without the car (travel × 2 plus the internal allowance), minus its actual cost. This is precomputed per activity as `alt` and `save`.
 
+## Cost rules for a person's day (v3.2)
+
+All costing is done per person per day by `dayPlans()` in `js/engine.js`; stops are taken in sheet order.
+
+- **One internal fee per day (بدل داخلي):** a person gets at most one internal fee per day, whatever the number of places or whether they are in the same city. Setting: *بدل داخلي واحد فقط لكل فرد في اليوم* (on by default). Damanhour service and car allowances are not affected.
+- **One route for several cities (خط سير واحد):** stops outside Damanhour that the person did without the car form one trip: Damanhour → A → B → Damanhour, priced as `fare(A) + hop(A→B) + fare(B)`.
+  * Two places in the **same city** need no hop (0), so the day costs one round trip.
+  * The hop between **two different cities** uses the price you typed for that pair. Until it is typed, it is estimated with the Damanhour → B fare and **flagged** (تقدير) in the visits table, the statements, the dashboard and the printed reports.
+  * Setting: *أكثر من مدينة في اليوم: خط سير واحد* (on by default). Turn it off for the old per-place round trips.
+- **Line prices (الخطوط بين المدن):** the Settings tab lists every city pair that appears in the file, flagged ones first. Type only the empty ones; prices are stored once per pair, in one direction for both ways, and reused for every day. A price above going via Damanhour is marked *راجعه*.
+- Stops with the car, zero-cost entities, Damanhour entities, unknown cities and cities without a price stay outside the trip and are costed as before.
+- "If no car" savings are computed on the whole day, so they always reconcile with the totals.
+
 ## Report cost sections (all marked "بالأسعار الحالية", for transparency only)
 - **ملخص التكلفة والتوفير:** total, breakdown, cost of car vs no-car activities, the cost if no car had been used, and the total saved.
 - **تكلفة كل فرد:** per-person cost split by allowance type, share of the total, and average per activity.
@@ -50,13 +63,13 @@ Works out travel allowances (بدلات المرور) from the inspection-visits
 - `index.html`: the app. `index.html?demo` loads demo data, `#open=report` opens the report dialog, `#open=filters` expands the filter board.
 
 ## Input format
-One sheet with the header row `اليوم | جهة المرور | الغرض من المرور | القائم بالمرور | سيارة الهيئة`, one row per day. Settings sheets (المدن، الافراد، …) are read when present. Fuzzy column detection is used as a fallback.
+One sheet with the header row `اليوم | جهة المرور | الغرض من المرور | القائم بالمرور | سيارة الهيئة`, one row per day. Settings sheets (المدن، الافراد، خطوط المدن، …) are read when present; the backup writes the pending pairs with an empty price so they can be filled in Excel and re-imported. Fuzzy column detection is used as a fallback.
 
 ## Storage
-localStorage only: `addad2.settings`, `addad2.data`, `addad3.ui` (filters, view, exclusions), `addad3.act` (report options), `addad2.theme`. Old `sel` people tabs are migrated into the people filter.
+localStorage only: `addad2.settings` (now also `internalOnce`, `chainTrips`, `pairs`), `addad2.data`, `addad3.ui` (filters, view, exclusions), `addad3.act` (report options), `addad2.theme`. Old `sel` people tabs are migrated into the people filter.
 
 ## Files
-`index.html` · `css/style.css` · `js/{data,xlsx,ui,engine,picker,filters,io,report,activity,views,app}.js` · `images/`
+`index.html` · `css/style.css` · `js/{data,xlsx,ui,engine,picker,filters,io,report,activity,views,app}.js` · `images/` · `tests/sanity.js` (`node tests/sanity.js`: real-tariff scenarios and invariants for the cost rules)
 
 ## Not yet
 - Old `.xls` format (save as xlsx).

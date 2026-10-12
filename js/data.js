@@ -47,6 +47,7 @@ const CITY_FORMS = (() => {
   o[DAMANHOUR] = [DAMANHOUR];
   return o;
 })();
+const pairKey = (a, b) => [a, b].sort().join("|");
 const canonCity = s => {
   const k = NZ(s);
   for (const [c, forms] of Object.entries(CITY_FORMS)) if (forms.some(f => NZ(f) === k)) return c;
@@ -234,7 +235,7 @@ const ENTITY_INFO = (() => {
 const DEFAULT_PEOPLE = { "اباظة": 1, "لبنى": 1, "أماني": 1, "غادة": 1, "شوقي": 2, "شلتوت": 2, "هنداوي": 1, "أديب": 1, "صبحي": 1 };
 
 const DEFAULT_SETTINGS = {
-  v: 8,
+  v: 9,
   entities: {},
   org: { name: "الهيئة العامة للتأمين الصحي", branch: "فرع البحيرة", title: "كشف بدلات الانتقال والسفر", signs: ["المختص", "المراجع", "مدير الإدارة"] },
   prices: Object.fromEntries(CITY_DEFS.map(d => [d[0], d[1]])),
@@ -248,6 +249,9 @@ const DEFAULT_SETTINGS = {
   carAllowance: { 1: 37.5, 2: 37.5, 3: 30 },
   carInDamanhour: false,
   carNearInternal: false,
+  internalOnce: true,
+  chainTrips: true,
+  pairs: {},
   servicePrice: SERVICE_TARIFF,
   serviceDefault: 2,
   exceptionsOn: true,

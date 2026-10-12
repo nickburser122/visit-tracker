@@ -3,7 +3,8 @@ const VIEWS = (() => {
   const CAT = { plan: "خطة المرور", insp: "فحص", other: "أخرى" };
   const CLS = { 1: "الدرجة الأولى", 2: "الدرجة الثانية", 3: "الدرجة الثالثة" };
   const CLS_S = ["", "الأولى", "الثانية", "الثالثة"];
-  const money = (n, miss) => "<span>" + fm(n) + "</span>" + (miss ? ' <span class="nil" title="بنود بلا سعر">+' + miss + "؟</span>" : "");
+  const money = (n, miss, est) => "<span>" + fm(n) + "</span>" + (miss ? ' <span class="nil" title="بنود بلا سعر">+' + miss + "؟</span>" : "") + (est ? ' <button class="nil" data-goset="pairs" title="يتضمن سعراً تقديرياً لخط بين مدينتين · حدّده في الإعدادات">تقدير</button>' : "");
+  const goSet = id => { S.tab = "prices"; saveUi(); render(); requestAnimationFrame(() => document.getElementById(id === "pairs" ? "pair-map" : "ent-map")?.scrollIntoView({ behavior: "smooth", block: "start" })); };
   const amt = a => a == null ? '<i class="nil">غير محدد</i>' : fm(a);
   const C1 = "var(--c1)", C2 = "var(--c2)", C3 = "var(--c3)";
   const emptyBox = msg => '<div class="panel empty">' + msg + '<br><button class="btn sm" style="margin-top:12px" data-clear-all>' + icons.reset + "مسح التصفية</button></div>";
@@ -12,7 +13,8 @@ const VIEWS = (() => {
     const c = e.target.closest("[data-clear-all]");
     if (c) { resetFilters(); saveUi(); FILTERS.sync(); update(); return; }
     if (e.target.closest("[data-act-report]")) { ACT.dialog(); return; }
-    if (e.target.closest("#view [data-goset]") && S.tab !== "visits") { S.tab = "prices"; saveUi(); render(); requestAnimationFrame(() => document.getElementById("ent-map")?.scrollIntoView({ behavior: "smooth", block: "start" })); return; }
+    const gs = e.target.closest("#view [data-goset]");
+    if (gs && S.tab !== "visits") { goSet(gs.dataset.goset); return; }
     const f = e.target.closest("[data-f]");
     if (f && f.closest("#view")) toggleFilter(f.dataset.f, f.dataset.k);
   });
@@ -74,6 +76,7 @@ const VIEWS = (() => {
     const unkN = Object.values(ENG.M.meta.unknown).filter(o => !o.city).length;
     let h = "";
     if (unkN || miss) h += '<div class="alert">' + icons.warn + "<span>" + (unkN ? unkN + " جهة بلا مدينة" : "") + (unkN && miss ? " · " : "") + (miss ? miss + " بند بلا سعر" : "") + '</span><button class="btn sm" data-goset>مراجعة</button></div>';
+    if (R.est) h += '<div class="alert">' + icons.warn + "<span>" + R.est + " بند انتقال بين مدينتين بسعر تقديري إلى أن يُحدَّد سعر الخط</span>" + '<button class="btn sm" data-goset="pairs">تحديد الأسعار</button></div>';
 
     h += '<div class="kpis">' +
       '<div class="kpi hero"><span class="k-l">إجمالي المستحق</span><span class="k-v">' + fm(total) + "<small>جنيه</small></span><span class=\"k-s\">" + (prev ? delta(total, prev.sum) + " عن " + esc(prev.label) + " · " + fm(prev.sum) : nM > 1 ? fm(total / nM) + " / شهر" : "") + (miss ? " · +" + miss + " بلا سعر" : "") + "</span></div>" +
@@ -135,7 +138,7 @@ const VIEWS = (() => {
     const o = VM && VM.get(G) || { sum: G.sum, miss: G.miss, keys: null, legs: null };
     const legs = o.legs ? G.legs.filter(v => o.legs.has(v)) : G.legs;
     const multi = G.legs.length > 1;
-    return '<tr' + (multi ? ' class="multi"' : "") + '><td data-l="اليوم">' + dateCell(G.d) + '</td><td data-l="الجهة" class="c-ent">' + (multi ? '<span class="legs-n">' + G.legs.length + " جهات · زيارة واحدة</span>" : "") + legs.map(legCell).join("") + (legs.length < G.legs.length ? '<div class="mut sm">+' + (G.legs.length - legs.length) + " خارج التصفية</div>" : "") + '</td><td data-l="الغرض"><button class="tag' + (G.cat === "plan" ? " w" : "") + '" data-f="purp" data-k="' + esc(G.pk) + '">' + esc(G.cat === "plan" ? "خطة المرور" : G.g || CAT[G.cat]) + '</button></td><td data-l="الأفراد"><div class="people">' + G.people.map(p => '<button class="pc' + (p.car ? " car" : "") + (o.keys && !o.keys.has(p.key) ? " dim" : "") + '" data-person="' + esc(p.key) + '" title="' + (p.car ? "بسيارة الهيئة" : "بدون سيارة") + (o.keys && !o.keys.has(p.key) ? " · خارج التصفية" : "") + '">' + (p.car ? icons.car : "") + esc(p.name) + "</button>").join("") + '</div></td><td class="n c-amt" data-l="المستحق">' + money(o.sum, o.miss) + "</td></tr>";
+    return '<tr' + (multi ? ' class="multi"' : "") + '><td data-l="اليوم">' + dateCell(G.d) + '</td><td data-l="الجهة" class="c-ent">' + (multi ? '<span class="legs-n">' + G.legs.length + " جهات · زيارة واحدة</span>" : "") + legs.map(legCell).join("") + (legs.length < G.legs.length ? '<div class="mut sm">+' + (G.legs.length - legs.length) + " خارج التصفية</div>" : "") + '</td><td data-l="الغرض"><button class="tag' + (G.cat === "plan" ? " w" : "") + '" data-f="purp" data-k="' + esc(G.pk) + '">' + esc(G.cat === "plan" ? "خطة المرور" : G.g || CAT[G.cat]) + '</button></td><td data-l="الأفراد"><div class="people">' + G.people.map(p => '<button class="pc' + (p.car ? " car" : "") + (o.keys && !o.keys.has(p.key) ? " dim" : "") + '" data-person="' + esc(p.key) + '" title="' + (p.car ? "بسيارة الهيئة" : "بدون سيارة") + (o.keys && !o.keys.has(p.key) ? " · خارج التصفية" : "") + '">' + (p.car ? icons.car : "") + esc(p.name) + "</button>").join("") + '</div></td><td class="n c-amt" data-l="المستحق">' + money(o.sum, o.miss, o.est) + "</td></tr>";
   }
   function visits(v) {
     const R = currentResult();
@@ -166,7 +169,8 @@ const VIEWS = (() => {
     tb.onclick = e => {
       const b = e.target.closest("[data-person]");
       if (b) { S.filters.people = [b.dataset.person]; S.pview = "statement"; S.tab = "people"; saveUi(); render(); scrollTo({ top: 0, behavior: "smooth" }); return; }
-      if (e.target.closest("[data-goset]")) { S.tab = "prices"; saveUi(); render(); requestAnimationFrame(() => document.getElementById("ent-map")?.scrollIntoView({ behavior: "smooth", block: "start" })); }
+      const gs = e.target.closest("[data-goset]");
+      if (gs) goSet(gs.dataset.goset);
     };
   }
 
@@ -181,7 +185,7 @@ const VIEWS = (() => {
       const out = S.excl.includes(it.id);
       it.ls.forEach((l, i) => {
         if (!out) n++;
-        rows += '<tr class="' + (i === 0 ? "first" : "cont") + (it.p.car ? " carline" : "") + (out ? " out" : "") + '">' + (i === 0 ? '<td rowspan="' + it.ls.length + '" class="sd"><div class="sd-in">' + exBox(it) + "<div>" + UI.dlabel(it.v.d) + '<span class="mut sm">' + UI.wday(it.v.d) + " · " + esc(it.v.g || CAT[it.v.cat]) + "</span></div></div></td>" : "") + '<td class="st">' + esc(l.t) + (l.ex ? ' <span class="tag d">استثناء</span>' : "") + '</td><td class="mut sm">' + esc(l.note || "") + '</td><td class="n">' + amt(l.a) + "</td></tr>";
+        rows += '<tr class="' + (i === 0 ? "first" : "cont") + (it.p.car ? " carline" : "") + (out ? " out" : "") + '">' + (i === 0 ? '<td rowspan="' + it.ls.length + '" class="sd"><div class="sd-in">' + exBox(it) + "<div>" + UI.dlabel(it.v.d) + '<span class="mut sm">' + UI.wday(it.v.d) + " · " + esc(it.v.g || CAT[it.v.cat]) + "</span></div></div></td>" : "") + '<td class="st">' + esc(l.t) + (l.ex ? ' <span class="tag d">استثناء</span>' : "") + (l.est ? ' <button class="tag d" data-goset="pairs" title="سعر تقديري · حدّد سعر الخط في الإعدادات">تقدير</button>' : "") + '</td><td class="mut sm">' + esc(l.note || "") + '</td><td class="n">' + amt(l.a) + "</td></tr>";
       });
     }
     return '<div class="tw"><table class="statement"><thead><tr><th>التاريخ</th><th>البيان</th><th>التفصيل</th><th class="n">المبلغ</th></tr></thead><tbody>' + rows + '<tr class="sumrow"><td colspan="3">الإجمالي · ' + P.visits + " زيارة · " + P.items.length + " نشاط · " + n + " بند" + (P.miss ? ' · <span class="nil">' + P.miss + " بلا سعر</span>" : "") + '</td><td class="n">' + fm(P.sum) + "</td></tr></tbody></table></div>";
@@ -262,7 +266,7 @@ const VIEWS = (() => {
 
     h += '<div class="grid g3">';
     h += '<section class="panel"><div class="panel-hd"><div><h2>الدرجات</h2></div></div><table class="mini"><thead><tr><th></th><th>داخلي</th><th>بدل سفر</th></tr></thead><tbody>' + [1, 2, 3].map(c => "<tr><td>" + CLS[c] + "</td><td>" + numInput(st.classAmount[c], 'data-cls="' + c + '"') + "</td><td>" + numInput(st.carAllowance[c], 'data-allow="' + c + '"') + "</td></tr>").join("") + "</tbody></table>" +
-      '<label class="toggle" style="margin-top:12px"><input type="checkbox" id="s-nearint"' + (st.carNearInternal ? " checked" : "") + '><span class="sw"></span>بالسيارة لمدينة بلا بدل سفر: صرف الداخلي</label><label class="toggle" style="margin-top:8px"><input type="checkbox" id="s-carin"' + (st.carInDamanhour ? " checked" : "") + '><span class="sw"></span>داخل دمنهور بالسيارة: صرف سيرفيس</label></section>';
+      '<label class="toggle" style="margin-top:12px"><input type="checkbox" id="s-nearint"' + (st.carNearInternal ? " checked" : "") + '><span class="sw"></span>بالسيارة لمدينة بلا بدل سفر: صرف الداخلي</label><label class="toggle" style="margin-top:8px"><input type="checkbox" id="s-carin"' + (st.carInDamanhour ? " checked" : "") + '><span class="sw"></span>داخل دمنهور بالسيارة: صرف سيرفيس</label><label class="toggle" style="margin-top:8px"><input type="checkbox" id="s-once"' + (st.internalOnce ? " checked" : "") + '><span class="sw"></span>بدل داخلي واحد فقط لكل فرد في اليوم</label><label class="toggle" style="margin-top:8px"><input type="checkbox" id="s-chain"' + (st.chainTrips ? " checked" : "") + '><span class="sw"></span>أكثر من مدينة في اليوم: خط سير واحد</label></section>';
     h += '<section class="panel"><div class="panel-hd"><div><h2>سيرفيس دمنهور</h2></div></div><div class="stack"><div class="pf set"><label>سعر السيرفيس الواحد</label>' + numInput(st.servicePrice, 'id="s-svc"') + '</div><div class="pf set"><label>العدد الافتراضي</label>' + numInput(st.serviceDefault, 'id="s-svcn"') + '</div><label class="toggle"><input type="checkbox" id="s-exon"' + (st.exceptionsOn ? " checked" : "") + '><span class="sw"></span>استثناءات (عدد مختلف)</label><div class="stack"' + (st.exceptionsOn ? "" : ' style="opacity:.45"') + ">" + st.exceptions.map((x, i) => '<div class="ex-row"><input class="txt" data-exn="' + i + '" value="' + esc(x.name) + '" placeholder="اسم الجهة">' + numInput(x.count, 'data-exc="' + i + '" style="width:60px"') + '<button class="icon-btn sm" data-exd="' + i + '" aria-label="حذف">' + ic.x + "</button></div>").join("") + '<button class="lnk" id="s-exadd">+ إضافة استثناء</button></div></div></section>';
     const zc = {};
     for (const x of ENG.M.visits) if (x.zero) zc[x.ek] = (zc[x.ek] || 0) + 1;
@@ -271,6 +275,16 @@ const VIEWS = (() => {
     h += '<section class="panel"><div class="panel-hd"><div><h2>المدن</h2><p>السعر اتجاه واحد</p></div><div class="row"><div class="seg" id="s-amode"><button data-m="city" aria-pressed="' + cityMode + '">البدل حسب المدينة</button><button data-m="km" aria-pressed="' + !cityMode + '">حسب المسافة</button></div>' + (cityMode ? "" : '<span class="pf set"><label>الحد كم</label>' + numInput(st.farKm, 'id="s-far" style="width:64px"') + "</span>") + '<input class="txt" id="s-newcity" placeholder="مدينة جديدة" style="width:140px"><button class="btn sm" id="s-addcity">إضافة</button></div></div>' +
       '<div class="tw"><table class="city-tbl"><thead><tr><th>المدينة</th><th>السعر</th><th>المسافة كم</th><th>بدل سفر</th><th class="n">زيارات</th></tr></thead><tbody>' +
       cities.map(c => { const f = ENG.isFar(c); return "<tr" + (f ? ' class="far"' : "") + "><td><b>" + esc(c) + "</b></td><td>" + numInput(st.prices[c], 'data-city="' + esc(c) + '"') + "</td><td>" + numInput(st.km[c], 'data-km="' + esc(c) + '"') + "</td><td>" + (cityMode ? '<label class="toggle"><input type="checkbox" data-al="' + esc(c) + '"' + (st.allow[c] ? " checked" : "") + '><span class="sw"></span></label>' : f == null ? '<span class="nil">؟</span>' : f ? '<span class="tag w">يستحق</span>' : '<span class="mut sm">لا</span>') + '</td><td class="n mut">' + (used[c] || "—") + "</td></tr>"; }).join("") + "</tbody></table></div></section>";
+
+    const mp = ENG.M.meta.pairs;
+    const prow = (k, o) => {
+      const [a, b] = k.split("|"), set = st.pairs[k], via = st.prices[a] != null && st.prices[b] != null ? st.prices[a] + st.prices[b] : null;
+      const flag = set == null ? '<span class="nil">مطلوب</span>' : set === 0 ? '<span class="tag d">صفر</span>' : via != null && set > via ? '<span class="tag d" title="أعلى من المرور عبر دمنهور">راجعه</span>' : "";
+      return '<tr class="' + (o ? "" : "mut") + '"><td><b>' + esc(a) + "</b> ↔ <b>" + esc(b) + "</b></td><td>" + numInput(set, 'data-pair="' + esc(k) + '"') + '</td><td class="n mut">' + (via == null ? "—" : fm(via)) + '</td><td class="n mut">' + (o ? o.n : "—") + "</td><td>" + flag + "</td></tr>";
+    };
+    const pend = ENG.M.meta.pend;
+    const prs = Object.entries(mp).sort((x, y) => (y[1].est - x[1].est) || y[1].n - x[1].n).map(([k, o]) => prow(k, o)).concat(Object.keys(st.pairs).filter(k => !(k in mp)).map(k => prow(k, null)));
+    h += '<section class="panel' + (pend ? " attn" : "") + '" id="pair-map"><div class="panel-hd"><div><h2>الخطوط بين المدن</h2><p>' + (pend ? pend + " خط بلا سعر · محسوب بسعر دمنهور إلى المدينة الثانية مؤقتاً" : "السعر اتجاه واحد بين مدينتين للأيام متعددة المدن") + "</p></div></div>" + (prs.length ? '<div class="tw"><table class="city-tbl"><thead><tr><th>الخط</th><th>السعر</th><th class="n">عبر دمنهور</th><th class="n">أيام</th><th></th></tr></thead><tbody>' + prs.join("") + "</tbody></table></div>" : '<p class="note">لا توجد أيام بأكثر من مدينة في الملف الحالي</p>') + "</section>";
 
     const unk = Object.entries(ENG.M.meta.unknown).sort((a, b) => (a[1].city ? 1 : 0) - (b[1].city ? 1 : 0) || b[1].n - a[1].n);
     const nNone = unk.filter(([, o]) => !o.city).length;
@@ -288,6 +302,7 @@ const VIEWS = (() => {
     bind("[data-allow]", (i, n) => st.carAllowance[i.dataset.allow] = n);
     bind("input[data-city]", (i, n) => st.prices[i.dataset.city] = n);
     bind("[data-km]", (i, n) => st.km[i.dataset.km] = n, !cityMode);
+    bind("input[data-pair]", (i, n) => { if (n == null) delete st.pairs[i.dataset.pair]; else st.pairs[i.dataset.pair] = n; }, true);
     bind("#s-far", (i, n) => st.farKm = n == null ? FAR_KM : n, true);
     bind("#s-svc", (i, n) => st.servicePrice = n);
     bind("#s-svcn", (i, n) => st.serviceDefault = Math.max(1, Math.round(n || 2)));
@@ -295,6 +310,8 @@ const VIEWS = (() => {
     const chk = (sel, fn) => v.querySelectorAll(sel).forEach(i => i.onchange = () => { fn(i); redraw(); });
     chk("[data-al]", i => st.allow[i.dataset.al] = i.checked);
     chk("#s-nearint", i => st.carNearInternal = i.checked);
+    chk("#s-once", i => st.internalOnce = i.checked);
+    chk("#s-chain", i => st.chainTrips = i.checked);
     chk("#s-carin", i => st.carInDamanhour = i.checked);
     chk("#s-exon", i => st.exceptionsOn = i.checked);
     chk("#s-zon", i => st.zeroOn = i.checked);

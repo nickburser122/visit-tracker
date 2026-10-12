@@ -22,6 +22,7 @@ const ACT = (() => {
   const CLS = ["", "الأولى", "الثانية", "الثالثة"];
   const KEY = "addad3.act";
   const PRICE_TAG = "بالأسعار الحالية";
+  const pairsUsed = R => { const m = new Map(); for (const it of R.items) for (const l of it.ls) if (l.pair && !m.has(l.pair)) m.set(l.pair, S.settings.pairs[l.pair] ?? null); return [...m].sort((a, b) => a[0].localeCompare(b[0], "ar")); };
 
   function loadOpts() {
     const base = { scope: "view", sections: Object.fromEntries(SECTIONS.map(([k, , on]) => [k, on])), arabic: !!S.settings.org.arabicDigits, title: "تقرير نشاط المرور", v: 2 };
@@ -139,8 +140,8 @@ const ACT = (() => {
       const noCarTotal = T.sum + T.save;
       B.push({ t: "html", html: '<section class="a-sec a-cost"><h3>ملخص التكلفة والتوفير <small>(' + PRICE_TAG + ')</small></h3><div class="a-cost-in"><div class="a-cost-tot"><span>إجمالي التكلفة التقديرية</span><b>' + fm2(T.sum) + " <small>جنيه</small></b>" + (T.miss ? "<em>+ " + T.miss + " بند بلا سعر لم يُحتسب</em>" : "") + '</div><div class="a-cost-k">' + KIND_ROWS.map(([k, l]) => "<div><span>" + l + "</span><b>" + fm2(T.kind[k]) + "</b><small>" + pct(T.kind[k], T.sum) + "%</small></div>").join("") + "</div></div>" +
         '<div class="a-save"><div><span>تكلفة أنشطة السيارة (' + T.carA + ")</span><b>" + fm2(T.carSum) + "</b></div><div><span>تكلفة الأنشطة بدون سيارة (" + T.nocarA + ")</span><b>" + fm2(T.nocarSum) + "</b></div><div><span>لو تمت كلها بدون سيارة</span><b>" + fm2(noCarTotal) + '</b></div><div class="hl"><span>وفّرته سيارة الهيئة</span><b>' + signed(T.save) + "</b><small>" + pct(T.save, noCarTotal) + "% من التكلفة البديلة</small></div></div>" +
-        (T.altMiss ? '<p class="a-fn">' + T.altMiss + " نشاط بالسيارة لم يُحسب له توفير لعدم وجود سعر للمدينة.</p>" : "") +
-        '<p class="a-fn">أساس الحساب: سيرفيس دمنهور ' + fm(st.servicePrice) + " جنيه للمرة · بدل داخلي " + [1, 2, 3].map(c => CLS[c] + " " + fm(st.classAmount[c])).join("، ") + " · بدل سفر بالسيارة " + [1, 2, 3].map(c => CLS[c] + " " + fm(st.carAllowance[c])).join("، ") + ".</p></section>" });
+        (T.altMiss ? '<p class="a-fn">' + T.altMiss + " نشاط بالسيارة لم يُحسب له توفير لعدم وجود سعر للمدينة.</p>" : "") + (R.est ? '<p class="a-fn">' + R.est + " بند انتقال بين مدينتين محسوب بسعر تقديري إلى أن يُحدَّد سعر الخط.</p>" : "") +
+        '<p class="a-fn">أساس الحساب: سيرفيس دمنهور ' + fm(st.servicePrice) + " جنيه للمرة · بدل داخلي " + [1, 2, 3].map(c => CLS[c] + " " + fm(st.classAmount[c])).join("، ") + " · بدل سفر بالسيارة " + [1, 2, 3].map(c => CLS[c] + " " + fm(st.carAllowance[c])).join("، ") + (st.internalOnce ? " · البدل الداخلي مرة واحدة لكل فرد في اليوم" : "") + (st.chainTrips ? " · اليوم متعدد المدن يُحسب كخط سير واحد" : "") + ".</p></section>" });
     }
     if (X.costPeople) {
       const ps = [...C.people].sort((a, b) => b.sum - a.sum);
@@ -171,6 +172,10 @@ const ACT = (() => {
       B.push({ t: "table", title: "الأسعار المستخدمة في الحساب", sub: "سعر الاتجاه الواحد للمدن الواردة في هذا التقرير · " + PRICE_TAG,
         head: '<tr><th class="c-n">م</th><th>المدينة</th><th class="c-r">السعر (اتجاه)</th><th class="c-r">ذهاب وعودة</th><th class="c-r">المسافة كم</th><th>بدل سفر بالسيارة</th></tr>',
         rows: used.map((c, i) => '<tr><td class="c-n">' + (i + 1) + "</td><td>" + esc(c) + '</td><td class="c-r">' + (st.prices[c] == null ? "غير محدد" : fm2(st.prices[c])) + '</td><td class="c-r">' + (st.prices[c] == null ? "—" : fm2(st.prices[c] * 2)) + '</td><td class="c-r">' + (st.km[c] == null ? "—" : fm(st.km[c])) + "</td><td>" + (ENG.isFar(c) ? "يستحق" : "لا") + "</td></tr>"), foot: "" });
+      const pu = pairsUsed(R);
+      if (pu.length) B.push({ t: "table", title: "الخطوط بين المدن المستخدمة", sub: "سعر الاتجاه الواحد بين مدينتين في الأيام متعددة المدن · " + PRICE_TAG,
+        head: '<tr><th class="c-n">م</th><th>الخط</th><th class="c-r">السعر (اتجاه)</th><th>الحالة</th></tr>',
+        rows: pu.map(([k, n], i) => '<tr><td class="c-n">' + (i + 1) + "</td><td>" + esc(k.split("|").join(" ↔ ")) + '</td><td class="c-r">' + (n == null ? "—" : fm2(n)) + "</td><td>" + (n == null ? "تقديري" : "محدد") + "</td></tr>"), foot: "" });
     }
     return B;
   }
@@ -305,7 +310,7 @@ const ACT = (() => {
     cg("costMonths", "التكلفة حسب الشهر", C.months, "الشهر");
     if (X.prices) {
       const used = [...new Set(R.items.map(it => it.v.city).filter(c => c && c !== DAMANHOUR))];
-      sheets.push({ name: "الأسعار المستخدمة", cols: [26, 14, 12, 10], rows: [["المدينة", "السعر (اتجاه)", "المسافة كم", "بدل سفر"], ...used.map(c => [c, st.prices[c], st.km[c], !!ENG.isFar(c)]), [], ["سيرفيس دمنهور", st.servicePrice], ...[1, 2, 3].map(c => ["بدل داخلي · " + CLS[c], st.classAmount[c]]), ...[1, 2, 3].map(c => ["بدل سفر بالسيارة · " + CLS[c], st.carAllowance[c]])] });
+      sheets.push({ name: "الأسعار المستخدمة", cols: [26, 14, 12, 10], rows: [["المدينة", "السعر (اتجاه)", "المسافة كم", "بدل سفر"], ...used.map(c => [c, st.prices[c], st.km[c], !!ENG.isFar(c)]), [], ...(pairsUsed(R).length ? [["خط بين مدينتين", "", "السعر (اتجاه)"], ...pairsUsed(R).map(([k, n]) => [...k.split("|"), n == null ? "تقديري" : n]), []] : []), ["سيرفيس دمنهور", st.servicePrice], ...[1, 2, 3].map(c => ["بدل داخلي · " + CLS[c], st.classAmount[c]]), ...[1, 2, 3].map(c => ["بدل سفر بالسيارة · " + CLS[c], st.carAllowance[c]])] });
     }
     UI.download("addad-activity_" + (o.scope === "all" ? "all" : IO.periodName()) + ".xlsx", XL.write(sheets));
     UI.toast("✓ Excel");

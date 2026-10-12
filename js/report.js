@@ -50,7 +50,7 @@ const REPORT = (() => {
   const signs = (list, extra) => '<div class="r-signs">' + [...(extra ? [extra] : []), ...list.filter(Boolean)].map(s => '<div><span>' + esc(s) + "</span><i></i><small>الاسم: ............................</small></div>").join("") + "</div>";
 
   function summaryPages(R, st, period, ref) {
-    const t = R.persons.reduce((o, p) => { for (const k in p.k) o[k] += p.k[k]; o.n += p.items.length; o.car += p.car; o.miss += p.miss; return o; }, { travel: 0, class: 0, service: 0, allow: 0, n: 0, car: 0, miss: 0 });
+    const t = R.persons.reduce((o, p) => { for (const k in p.k) o[k] += p.k[k]; o.n += p.items.length; o.car += p.car; o.miss += p.miss; o.est += p.est; return o; }, { travel: 0, class: 0, service: 0, allow: 0, n: 0, car: 0, miss: 0, est: 0 });
     const chunks = [];
     let i = 0;
     while (i < R.persons.length || !chunks.length) { const size = chunks.length ? SUM_CONT : SUM_FIRST; chunks.push(R.persons.slice(i, i + size)); i += size; }
@@ -60,7 +60,7 @@ const REPORT = (() => {
     let idx = 0;
     const thead = '<thead><tr><th class="c-n">م</th><th>الاسم</th><th>الدرجة</th><th class="c-r">الزيارات</th><th class="c-r">انتقال</th><th class="c-r">داخلي</th><th class="c-r">سيرفيس</th><th class="c-r">بدل سفر</th><th class="c-r">الإجمالي</th><th class="c-sig">التوقيع</th></tr></thead>';
     const tfoot = '<tfoot><tr><td colspan="3">الإجمالي العام</td><td class="c-r">' + t.n + '</td><td class="c-r">' + fm2(t.travel) + '</td><td class="c-r">' + fm2(t.class) + '</td><td class="c-r">' + fm2(t.service) + '</td><td class="c-r">' + fm2(t.allow) + '</td><td class="c-r">' + fm2(R.total) + "</td><td></td></tr></tfoot>";
-    const closing = '<div class="r-close"><div class="r-words"><span>المبلغ الإجمالي</span><b>' + fm2(R.total) + " جنيه</b><p>" + tafqit(R.total) + "</p></div>" + (t.miss ? '<p class="r-warn">ملاحظة: يوجد ' + t.miss + " بند بلا سعر محدد ولم يُحتسب ضمن الإجمالي.</p>" : "") + signs(st.org.signs) + "</div>";
+    const closing = '<div class="r-close"><div class="r-words"><span>المبلغ الإجمالي</span><b>' + fm2(R.total) + " جنيه</b><p>" + tafqit(R.total) + "</p></div>" + (t.miss ? '<p class="r-warn">ملاحظة: يوجد ' + t.miss + " بند بلا سعر محدد ولم يُحتسب ضمن الإجمالي.</p>" : "") + (t.est ? '<p class="r-warn">ملاحظة: يوجد ' + t.est + " بند انتقال بين جهتين في مدينتين محسوب بسعر تقديري إلى أن يُحدَّد سعر الخط.</p>" : "") + signs(st.org.signs) + "</div>";
     chunks.forEach((ch, ci) => {
       let h = '<section class="r-page">' + header(st, st.org.title, period + (ci ? " · تابع" : ""), ref) + '<div class="r-body">';
       if (ci === 0) {
@@ -92,7 +92,7 @@ const REPORT = (() => {
     let run = 0;
     chunks.forEach(ch => { for (const it of ch) run += it.sum; carry.push(run); });
     const thead = '<thead><tr><th class="c-n">م</th><th class="c-date">التاريخ</th><th>البيان</th><th>التفصيل</th><th class="c-r">المبلغ</th></tr></thead>';
-    const closing = '<div class="r-close"><div class="r-words"><span>صافي المستحق</span><b>' + fm2(P.sum) + " جنيه</b><p>" + tafqit(P.sum) + "</p></div>" + (P.miss ? '<p class="r-warn">ملاحظة: ' + P.miss + " بند بلا سعر محدد ولم يُحتسب.</p>" : "") + '<p class="r-decl">أقر بصحة البيانات الواردة أعلاه وأن الانتقالات تمت فعلياً لأداء أعمال رسمية.</p>' + signs(st.org.signs, "توقيع المستحق") + "</div>";
+    const closing = '<div class="r-close"><div class="r-words"><span>صافي المستحق</span><b>' + fm2(P.sum) + " جنيه</b><p>" + tafqit(P.sum) + "</p></div>" + (P.miss ? '<p class="r-warn">ملاحظة: ' + P.miss + " بند بلا سعر محدد ولم يُحتسب.</p>" : "") + (P.est ? '<p class="r-warn">ملاحظة: يوجد ' + P.est + " بند انتقال بين جهتين في مدينتين محسوب بسعر تقديري إلى أن يُحدَّد سعر الخط.</p>" : "") + '<p class="r-decl">أقر بصحة البيانات الواردة أعلاه وأن الانتقالات تمت فعلياً لأداء أعمال رسمية.</p>' + signs(st.org.signs, "توقيع المستحق") + "</div>";
     let seq = 0;
     const pages = chunks.map((ch, ci) => {
       let h = '<section class="r-page">' + header(st, "كشف بدل انتقال · " + P.name, period + (ci ? " · تابع" : ""), ref) + '<div class="r-body">';
