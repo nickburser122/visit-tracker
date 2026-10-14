@@ -29,6 +29,7 @@ function loadStore() {
         org: { ...base.org, ...(s.org || {}) },
         entities: s.entities || {},
         people: { ...base.people, ...(s.people || {}) } };
+      if (v < 10 && S.settings.people["شلتوت"]) S.settings.people["شلتوت"].cls = 1;
       if (v < base.v) saveSettings();
     } else S.settings = base;
   } catch (e) { S.settings = base; }

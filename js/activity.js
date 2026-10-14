@@ -22,7 +22,7 @@ const ACT = (() => {
   const CLS = ["", "الأولى", "الثانية", "الثالثة"];
   const KEY = "addad3.act";
   const PRICE_TAG = "بالأسعار الحالية";
-  const pairsUsed = R => { const m = new Map(); for (const it of R.items) for (const l of it.ls) if (l.pair && !m.has(l.pair)) m.set(l.pair, S.settings.pairs[l.pair] ?? null); return [...m].sort((a, b) => a[0].localeCompare(b[0], "ar")); };
+  const pairsUsed = R => { const m = new Map(); for (const it of R.items) for (const l of it.raw) if (l.pair && !m.has(l.pair)) m.set(l.pair, S.settings.pairs[l.pair] ?? null); return [...m].sort((a, b) => a[0].localeCompare(b[0], "ar")); };
 
   function loadOpts() {
     const base = { scope: "view", sections: Object.fromEntries(SECTIONS.map(([k, , on]) => [k, on])), arabic: !!S.settings.org.arabicDigits, title: "تقرير نشاط المرور", v: 2 };

@@ -159,14 +159,14 @@ function dayTotals(R) {
 for (const seed of [7, 99, 2026]) {
   const rows = bigMonth(seed);
   const allItems = [];
-  for (const patch of [{}, { internalOnce: false }, { chainTrips: false }, { internalOnce: false, chainTrips: false }]) {
+  for (const patch of [{}, { internalOnce: false }, { chainTrips: false }, { internalOnce: false, chainTrips: false }, { mergeTrips: false }, { hideZero: false }, { mergeTrips: false, hideZero: false }]) {
     const tag = "seed " + seed + " " + JSON.stringify(patch);
     R = run(rows, patch);
     const m = ENG.M;
     let sumLines = true, kindSum = true, onceOk = true, estOk = true, cls = {};
     for (const it of m.items) {
       let s = 0, e = 0;
-      for (const l of it.ls) { if (l.a != null) s += l.a; if (l.est) e++; }
+      for (const l of it.ls) { if (l.a != null) s += l.a; if (l.est) e += l.estN || 1; }
       if (Math.abs(s - it.sum) > 1e-9) sumLines = false;
       if (Math.abs(it.k.travel + it.k.class + it.k.service + it.k.allow - it.sum) > 1e-9) kindSum = false;
       if (e !== it.est) estOk = false;
@@ -221,6 +221,81 @@ for (const seed of [7, 99, 2026]) {
   check("single-stop days are identical to legacy (no regression)", equalSingle, singleDays);
   check("legacy and new agree on missing-price count", R.miss, legacyMiss);
 }
+
+{
+  const rows = bigMonth(2026);
+  const ref = run(rows, { mergeTrips: false, hideZero: false });
+  const refDays = dayTotals(ref), refTotal = ref.total, refMiss = ref.miss, refEst = ref.est;
+  R = run(rows, {});
+  const now = dayTotals(R);
+  let dayOk = true;
+  for (const [k, v] of refDays) if (Math.abs(v - (now.get(k) || 0)) > 1e-9) dayOk = false;
+  check("defaults: grand total identical to unmerged/unhidden", R.total, refTotal);
+  check("defaults: every person-day total identical", dayOk, true);
+  check("defaults: missing-price count identical", R.miss, refMiss);
+  check("defaults: estimated-hop count identical", R.est, refEst);
+  let zeroShown = 0, tripLinesPerDay = new Map(), blank = 0, rawKept = true;
+  for (const it of ENG.M.items) {
+    for (const l of it.ls) if (l.a === 0) zeroShown++;
+    const k = it.p.key + "|" + it.v.d;
+    tripLinesPerDay.set(k, (tripLinesPerDay.get(k) || 0) + it.ls.filter(l => l.trip).length);
+    if (!it.ls.length) blank++;
+    if (it.raw.length < it.ls.length - 1) rawKept = false;
+  }
+  check("defaults: no zero-fee line is shown", zeroShown, 0);
+  check("defaults: at most one route line per person per day", Math.max(...tripLinesPerDay.values()) <= 1, true);
+  check("defaults: raw lines are kept for filters", rawKept, true);
+  check("defaults: some items are fully hidden (zero-only)", blank > 0, true);
+  const off = run(rows, { mergeTrips: false, hideZero: false });
+  let same = true;
+  for (const it of ENG.M.items) if (it.ls !== it.raw && JSON.stringify(it.ls) !== JSON.stringify(it.raw)) same = false;
+  check("both toggles off: display lines equal the legacy lines", same, true);
+  check("both toggles off: total unchanged", off.total, refTotal);
+  const hz = run(rows, { mergeTrips: false });
+  check("hide-zero only: total unchanged", hz.total, refTotal);
+  const mg = run(rows, { hideZero: false });
+  check("merge only: total unchanged", mg.total, refTotal);
+  run(rows, {});
+  const kz = ENG.filter({ ...BLANK, kinds: ["zero"] });
+  const kzOff = (run(rows, { hideZero: false }), ENG.filter({ ...BLANK, kinds: ["zero"] }));
+  check("kind filter still finds zero-fee entities while they are hidden", kz.items.length, kzOff.items.length);
+  check("kind filter finds some zero-fee items", kz.items.length > 0, true);
+}
+
+{
+  R = run([row(D, ENT.kd1, "ميسرة"), row(D, ENT.ah, "ميسرة"), row(D, ENT.itay, "ميسرة")], { pairs: { [pk(KD, AH)]: 10, [pk(AH, IT)]: 15 } });
+  const items = ENG.M.items.filter(it => it.p.name === "ميسرة");
+  const withLines = items.filter(it => it.ls.length);
+  const routeLines = items.flatMap(it => it.ls).filter(l => l.kind === "travel");
+  check("three-city day shows exactly one route line", routeLines.length, 1);
+  check("route line carries the whole route fare", routeLines[0].a, P(KD) + 10 + 15 + P(IT));
+  check("route line names every place in order", routeLines[0].t, "من دمنهور إلى " + [ENT.kd1, ENT.ah, ENT.itay].join(" ثم ") + " والعودة");
+  check("only the internal fee remains besides the route line", items.flatMap(it => it.ls).length, 2);
+  check("only one item carries lines", withLines.length, 1);
+
+  R = run([row(D, ENT.kd1, "ميسرة"), row(D, ENT.kd2, "ميسرة")]);
+  const l2 = ENG.M.items.flatMap(it => it.ls).filter(l => l.kind === "travel");
+  check("two visits in the same city give one route line", l2.length, 1);
+  check("same-city route costs one round trip", l2[0].a, 2 * P(KD));
+
+  R = run([row(D, ENT.kd1, "ميسرة"), row(D, ENT.ah, "ميسرة")]);
+  const est = ENG.M.items.flatMap(it => it.ls).find(l => l.kind === "travel");
+  check("estimated hop keeps its flag on the merged line", est.est, true);
+  check("estimated hop keeps its pair on the merged line", est.pair, pk(KD, AH));
+
+  R = run([row(D, ENT.kd1, "ميسرة"), row(D, ENT.ah, "ميسرة")], { mergeTrips: false, hideZero: false });
+  check("merge off: three separate travel lines come back", ENG.M.items.flatMap(it => it.ls).filter(l => l.kind === "travel").length, 3);
+
+  R = run([row(D, "الشرطة", "ميسرة"), row(D, ENT.kd1, "ميسرة")], { hideZero: true });
+  check("zero-cost entity row is hidden by default", ENG.M.items.find(it => it.v.ent === "الشرطة").ls.length, 0);
+  R = run([row(D, "الشرطة", "ميسرة"), row(D, ENT.kd1, "ميسرة")], { hideZero: false });
+  check("zero-cost entity row returns when the toggle is off", ENG.M.items.find(it => it.v.ent === "الشرطة").ls.length, 1);
+
+  R = run([row(D, ENT.kd1, "ميسرة")], { prices: { ...DEFAULT_SETTINGS.prices, [KD]: null } });
+  check("unpriced lines are never hidden", ENG.M.items[0].ls.some(l => l.a == null), true);
+}
+
+check("شلتوت is first class by default", DEFAULT_SETTINGS.people["شلتوت"].cls, 1);
 
 console.log("\n" + pass + " passed, " + fail + " failed");
 process.exit(fail ? 1 : 0);

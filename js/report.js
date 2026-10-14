@@ -77,7 +77,8 @@ const REPORT = (() => {
   }
 
   function personPages(P, st, period, ref) {
-    const items = [...P.items].sort((a, b) => a.v.d < b.v.d ? -1 : a.v.d > b.v.d ? 1 : a.v.ent.localeCompare(b.v.ent, "ar"));
+    const all = [...P.items].sort((a, b) => a.v.d < b.v.d ? -1 : a.v.d > b.v.d ? 1 : a.v.ent.localeCompare(b.v.ent, "ar"));
+    const items = all.filter(it => it.ls.length);
     const chunks = [[]];
     let room = ROWS_FIRST;
     for (const it of items) {
@@ -96,7 +97,7 @@ const REPORT = (() => {
     let seq = 0;
     const pages = chunks.map((ch, ci) => {
       let h = '<section class="r-page">' + header(st, "كشف بدل انتقال · " + P.name, period + (ci ? " · تابع" : ""), ref) + '<div class="r-body">';
-      if (ci === 0) h += '<div class="r-person"><div class="big"><span>الاسم</span><b>' + esc(P.name) + "</b></div><div><span>الدرجة</span><b>" + CLS[P.cls] + "</b></div><div><span>الزيارات</span><b>" + items.length + "</b></div><div><span>بسيارة الهيئة</span><b>" + P.car + "</b></div><div><span>المسافة</span><b>" + UI.fm(P.km) + " <small>كم</small></b></div></div>";
+      if (ci === 0) h += '<div class="r-person"><div class="big"><span>الاسم</span><b>' + esc(P.name) + "</b></div><div><span>الدرجة</span><b>" + CLS[P.cls] + "</b></div><div><span>الزيارات</span><b>" + all.length + "</b></div><div><span>بسيارة الهيئة</span><b>" + P.car + "</b></div><div><span>المسافة</span><b>" + UI.fm(P.km) + " <small>كم</small></b></div></div>";
       h += '<table class="r-tbl r-stmt">' + thead + "<tbody>";
       if (ci > 0) h += '<tr class="r-carry"><td colspan="4">رصيد منقول من الصفحة السابقة</td><td class="c-r">' + fm2(carry[ci - 1]) + "</td></tr>";
       for (const it of ch) {
@@ -107,7 +108,7 @@ const REPORT = (() => {
       }
       h += "</tbody>";
       if (ci < chunks.length - 1) h += '<tfoot class="sub"><tr><td colspan="4">يُنقل إلى الصفحة التالية</td><td class="c-r">' + fm2(carry[ci]) + "</td></tr></tfoot>";
-      else h += '<tfoot><tr><td colspan="4">الإجمالي · ' + items.length + " زيارة · " + nLines + ' بند</td><td class="c-r">' + fm2(P.sum) + "</td></tr></tfoot>";
+      else h += '<tfoot><tr><td colspan="4">الإجمالي · ' + all.length + " زيارة · " + nLines + ' بند</td><td class="c-r">' + fm2(P.sum) + "</td></tr></tfoot>";
       h += "</table>";
       if (ci === chunks.length - 1 && !closeSeparate) h += closing;
       return h + "</div>";

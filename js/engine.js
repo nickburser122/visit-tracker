@@ -457,18 +457,18 @@ const ENG = (() => {
   function tripLines(ch, i) {
     const st = S.settings, v = ch[i].v, pr = st.prices[v.city], kmT = kmText(v);
     const out = [];
-    if (i === 0) out.push({ t: "من دمنهور إلى " + v.ent, note: UI.fm(pr) + (kmT ? " · " + kmT : ""), q: 1, a: pr, kind: "travel" });
+    if (i === 0) out.push({ t: "من دمنهور إلى " + v.ent, note: UI.fm(pr) + (kmT ? " · " + kmT : ""), q: 1, a: pr, kind: "travel", trip: true });
     else {
       const u = ch[i - 1].v, t = "من " + u.ent + " إلى " + v.ent;
-      if (u.city === v.city) out.push({ t, note: "نفس المدينة · لا انتقال بين المدن", a: 0, kind: "travel" });
+      if (u.city === v.city) out.push({ t, note: "نفس المدينة · لا انتقال بين المدن", a: 0, kind: "travel", trip: true });
       else {
         const pair = pairKey(u.city, v.city), set = st.pairs[pair];
         out.push(set != null
-          ? { t, note: UI.fm(set) + " · الخط بين " + u.city + " و" + v.city, a: set, kind: "travel", pair }
-          : { t, note: "تقدير بسعر دمنهور إلى " + v.city + " · حدّد سعر الخط بين " + u.city + " و" + v.city, a: pr, kind: "travel", pair, est: true });
+          ? { t, note: UI.fm(set) + " · الخط بين " + u.city + " و" + v.city, a: set, kind: "travel", pair, trip: true }
+          : { t, note: "تقدير بسعر دمنهور إلى " + v.city + " · حدّد سعر الخط بين " + u.city + " و" + v.city, a: pr, kind: "travel", pair, est: true, trip: true });
       }
     }
-    if (i === ch.length - 1) out.push({ t: "من " + v.ent + " إلى دمنهور", note: UI.fm(pr) + (kmT ? " · " + kmT : ""), q: 1, a: pr, kind: "travel" });
+    if (i === ch.length - 1) out.push({ t: "من " + v.ent + " إلى دمنهور", note: UI.fm(pr) + (kmT ? " · " + kmT : ""), q: 1, a: pr, kind: "travel", trip: true });
     return out;
   }
 
@@ -487,6 +487,31 @@ const ENG = (() => {
       res.set(s.v, ls);
     }
     return res;
+  }
+
+  function mergeRoute(res) {
+    const route = [];
+    for (const [v, ls] of res) for (const l of ls) if (l.trip) route.push({ v, l });
+    if (!route.length) return res;
+    const head = route[0].v, parts = route.map(r => r.l);
+    const ents = [...new Set(route.map(r => r.v.ent))];
+    const est = parts.filter(l => l.est).length;
+    const pair = (parts.find(l => l.est) || parts.find(l => l.pair) || {}).pair;
+    const line = { t: "من دمنهور إلى " + ents.join(" ثم ") + " والعودة", note: parts.filter(l => l.a !== 0).map(l => UI.fm(l.a)).join(" + ") + (est ? " · يتضمن سعراً تقديرياً" : ""), a: parts.reduce((s, l) => s + l.a, 0), kind: "travel", trip: true };
+    if (est) { line.est = true; line.estN = est; }
+    if (pair) line.pair = pair;
+    const out = new Map();
+    for (const [v, ls] of res) { const rest = ls.filter(l => !l.trip); out.set(v, v === head ? [line, ...rest] : rest); }
+    return out;
+  }
+
+  function compose(res) {
+    const st = S.settings;
+    const merged = st.mergeTrips ? mergeRoute(res) : res;
+    if (!st.hideZero) return merged;
+    const out = new Map();
+    for (const [v, ls] of merged) out.set(v, ls.filter(l => l.a !== 0));
+    return out;
   }
 
   const total = ls => { let s = 0; for (const l of ls) { if (l.a == null) return null; s += l.a; } return s; };
@@ -511,7 +536,7 @@ const ENG = (() => {
     for (const [k, g] of groups) {
       g.sort((a, b) => a.v.ord - b.v.ord);
       const act = solve(g, false);
-      const plan = { act, altOf: null };
+      const plan = { act, view: compose(act), altOf: null };
       mark(act, g[0].v.d);
       const fc = g.findIndex(s => s.p.car);
       if (fc >= 0) {
@@ -593,12 +618,12 @@ const ENG = (() => {
       v.sum = 0; v.miss = 0; v.est = 0;
       for (const p of v.people) {
         const pl = plans.get(p.key + "|" + v.d);
-        const ls = pl.act.get(v);
+        const ls = pl.view.get(v), raw = pl.act.get(v);
         let sum = 0, miss = 0, est = 0;
         const k = { travel: 0, class: 0, service: 0, allow: 0 };
-        for (const l of ls) { if (l.est) est++; if (l.a == null) miss++; else { sum += l.a; if (l.kind in k) k[l.kind] += l.a; } }
+        for (const l of ls) { if (l.est) est += l.estN || 1; if (l.a == null) miss++; else { sum += l.a; if (l.kind in k) k[l.kind] += l.a; } }
         const alt = p.car ? pl.altOf.get(v) : (miss ? null : sum);
-        items.push({ id: v.id + "|" + p.key, v, p, ls, sum, miss, est, k, alt, save: p.car && alt != null ? alt - sum : 0 });
+        items.push({ id: v.id + "|" + p.key, v, p, ls, raw, sum, miss, est, k, alt, save: p.car && alt != null ? alt - sum : 0 });
         v.sum += sum; v.miss += miss; v.est += est;
         inc(meta.people, p.key, p.name);
       }
@@ -667,7 +692,7 @@ const ENG = (() => {
       if (people && !people.has(it.p.key)) continue;
       if (car && !car.has(it.p.car ? "car" : "nocar")) continue;
       if (amt && !amt.has(amtOf(it))) continue;
-      if (kinds && !it.ls.some(l => kinds.has(l.kind))) continue;
+      if (kinds && !it.raw.some(l => kinds.has(l.kind))) continue;
       const v = it.v;
       let ok = true;
       for (const t of tests) if (!t(v)) { ok = false; break; }
@@ -706,7 +731,7 @@ const ENG = (() => {
     car: it => it.p.car ? "car" : "nocar",
     zone: it => it.v.city === DAMANHOUR ? "in" : "out",
     amt: it => amtOf(it),
-    kinds: it => [...new Set(it.ls.map(l => l.kind))],
+    kinds: it => [...new Set(it.raw.map(l => l.kind))],
     people: it => it.p.key,
     types: it => it.v.type,
     cities: it => it.v.city || "?",

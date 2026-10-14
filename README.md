@@ -10,7 +10,7 @@ Works out travel allowances (بدلات المرور) from the inspection-visits
   - Car use stays per activity. A visit is "mixed" when only part of the team or part of its rows used the car.
 - **Saving by car:** the cost of a car activity if it had been done without the car (travel × 2 plus the internal allowance), minus its actual cost. This is precomputed per activity as `alt` and `save`.
 
-## Cost rules for a person's day (v3.2)
+## Cost rules for a person's day (v3.2, display options v3.3)
 
 All costing is done per person per day by `dayPlans()` in `js/engine.js`; stops are taken in sheet order.
 
@@ -20,6 +20,8 @@ All costing is done per person per day by `dayPlans()` in `js/engine.js`; stops 
   * The hop between **two different cities** uses the price you typed for that pair. Until it is typed, it is estimated with the Damanhour → B fare and **flagged** (تقدير) in the visits table, the statements, the dashboard and the printed reports.
   * Setting: *أكثر من مدينة في اليوم: خط سير واحد* (on by default). Turn it off for the old per-place round trips.
 - **Line prices (الخطوط بين المدن):** the Settings tab lists every city pair that appears in the file, flagged ones first. Type only the empty ones; prices are stored once per pair, in one direction for both ways, and reused for every day. A price above going via Damanhour is marked *راجعه*.
+- **Route in one line (دمج خط السير في بند واحد):** a chained day shows a single line, `من دمنهور إلى A ثم B ثم C والعودة`, with the whole route fare and a note listing the parts (`18 + 10 + 18`). It is attached to the first stop of the route; the other stops keep only their own lines. Totals, savings and flags do not change. Setting `mergeTrips` (on by default); turn it off to see the per-leg lines again.
+- **Hide zero lines (إخفاء البنود التي قيمتها صفر):** lines worth 0 (same-city hops, the repeated internal fee, zero-cost entities, car trips without allowance) are left out of the statements, the ledger, the printed reports and the Excel lines sheet; an activity left with no lines is skipped there. Lines with no price are never hidden. Setting `hideZero` (on by default). Filters by item kind still see every line.
 - Stops with the car, zero-cost entities, Damanhour entities, unknown cities and cities without a price stay outside the trip and are costed as before.
 - "If no car" savings are computed on the whole day, so they always reconcile with the totals.
 
@@ -66,7 +68,7 @@ All costing is done per person per day by `dayPlans()` in `js/engine.js`; stops 
 One sheet with the header row `اليوم | جهة المرور | الغرض من المرور | القائم بالمرور | سيارة الهيئة`, one row per day. Settings sheets (المدن، الافراد، خطوط المدن، …) are read when present; the backup writes the pending pairs with an empty price so they can be filled in Excel and re-imported. Fuzzy column detection is used as a fallback.
 
 ## Storage
-localStorage only: `addad2.settings` (now also `internalOnce`, `chainTrips`, `pairs`), `addad2.data`, `addad3.ui` (filters, view, exclusions), `addad3.act` (report options), `addad2.theme`. Old `sel` people tabs are migrated into the people filter.
+localStorage only: `addad2.settings` (now also `internalOnce`, `chainTrips`, `mergeTrips`, `hideZero`, `pairs`), `addad2.data`, `addad3.ui` (filters, view, exclusions), `addad3.act` (report options), `addad2.theme`. Old `sel` people tabs are migrated into the people filter.
 
 ## Files
 `index.html` · `css/style.css` · `js/{data,xlsx,ui,engine,picker,filters,io,report,activity,views,app}.js` · `images/` · `tests/sanity.js` (`node tests/sanity.js`: real-tariff scenarios and invariants for the cost rules)

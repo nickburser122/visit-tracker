@@ -232,10 +232,10 @@ const ENTITY_INFO = (() => {
   return o;
 })();
 
-const DEFAULT_PEOPLE = { "اباظة": 1, "لبنى": 1, "أماني": 1, "غادة": 1, "شوقي": 2, "شلتوت": 2, "هنداوي": 1, "أديب": 1, "صبحي": 1 };
+const DEFAULT_PEOPLE = { "اباظة": 1, "لبنى": 1, "أماني": 1, "غادة": 1, "شوقي": 2, "شلتوت": 1, "هنداوي": 1, "أديب": 1, "صبحي": 1 };
 
 const DEFAULT_SETTINGS = {
-  v: 9,
+  v: 10,
   entities: {},
   org: { name: "الهيئة العامة للتأمين الصحي", branch: "فرع البحيرة", title: "كشف بدلات الانتقال والسفر", signs: ["المختص", "المراجع", "مدير الإدارة"] },
   prices: Object.fromEntries(CITY_DEFS.map(d => [d[0], d[1]])),
@@ -251,6 +251,8 @@ const DEFAULT_SETTINGS = {
   carNearInternal: false,
   internalOnce: true,
   chainTrips: true,
+  mergeTrips: true,
+  hideZero: true,
   pairs: {},
   servicePrice: SERVICE_TARIFF,
   serviceDefault: 2,

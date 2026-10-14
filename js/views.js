@@ -192,7 +192,7 @@ const VIEWS = (() => {
   }
 
   function ledger(P, R) {
-    const items = withExcluded(P, R);
+    const items = withExcluded(P, R).filter(it => it.ls.length);
     return '<div class="tw"><table class="ledger"><thead><tr><th>اليوم</th><th>جهة المرور</th><th>الغرض</th><th>البنود</th><th class="n">المبلغ</th></tr></thead><tbody>' + items.map(it => '<tr class="' + (S.excl.includes(it.id) ? "out" : "") + '"><td><div class="sd-in">' + exBox(it) + dateCell(it.v.d) + "</div></td><td><b>" + esc(it.v.ent) + '</b><div class="mut sm">' + esc(it.v.city || "مدينة غير معروفة") + (it.v.people.length > 1 ? " · مع " + it.v.people.filter(p => p.key !== P.key).map(p => esc(p.name)).join("، ") : "") + '</div></td><td><span class="tag' + (it.v.cat === "plan" ? " w" : "") + '">' + esc(it.v.g || CAT[it.v.cat]) + "</span>" + (it.p.car ? ' <span class="tag o">' + icons.car + " سيارة</span>" : "") + '</td><td><div class="ln-list">' + it.ls.map(l => '<div class="ln"><span>' + esc(l.t) + "</span><span>" + amt(l.a) + "</span></div>").join("") + '</div></td><td class="n"><b>' + money(it.sum, it.miss) + "</b></td></tr>").join("") + '<tr class="sumrow"><td colspan="4">الإجمالي · ' + P.visits + ' زيارة · ' + P.items.length + ' نشاط</td><td class="n">' + fm(P.sum) + "</td></tr></tbody></table></div>";
   }
 
@@ -266,7 +266,7 @@ const VIEWS = (() => {
 
     h += '<div class="grid g3">';
     h += '<section class="panel"><div class="panel-hd"><div><h2>الدرجات</h2></div></div><table class="mini"><thead><tr><th></th><th>داخلي</th><th>بدل سفر</th></tr></thead><tbody>' + [1, 2, 3].map(c => "<tr><td>" + CLS[c] + "</td><td>" + numInput(st.classAmount[c], 'data-cls="' + c + '"') + "</td><td>" + numInput(st.carAllowance[c], 'data-allow="' + c + '"') + "</td></tr>").join("") + "</tbody></table>" +
-      '<label class="toggle" style="margin-top:12px"><input type="checkbox" id="s-nearint"' + (st.carNearInternal ? " checked" : "") + '><span class="sw"></span>بالسيارة لمدينة بلا بدل سفر: صرف الداخلي</label><label class="toggle" style="margin-top:8px"><input type="checkbox" id="s-carin"' + (st.carInDamanhour ? " checked" : "") + '><span class="sw"></span>داخل دمنهور بالسيارة: صرف سيرفيس</label><label class="toggle" style="margin-top:8px"><input type="checkbox" id="s-once"' + (st.internalOnce ? " checked" : "") + '><span class="sw"></span>بدل داخلي واحد فقط لكل فرد في اليوم</label><label class="toggle" style="margin-top:8px"><input type="checkbox" id="s-chain"' + (st.chainTrips ? " checked" : "") + '><span class="sw"></span>أكثر من مدينة في اليوم: خط سير واحد</label></section>';
+      '<label class="toggle" style="margin-top:12px"><input type="checkbox" id="s-nearint"' + (st.carNearInternal ? " checked" : "") + '><span class="sw"></span>بالسيارة لمدينة بلا بدل سفر: صرف الداخلي</label><label class="toggle" style="margin-top:8px"><input type="checkbox" id="s-carin"' + (st.carInDamanhour ? " checked" : "") + '><span class="sw"></span>داخل دمنهور بالسيارة: صرف سيرفيس</label><label class="toggle" style="margin-top:8px"><input type="checkbox" id="s-once"' + (st.internalOnce ? " checked" : "") + '><span class="sw"></span>بدل داخلي واحد فقط لكل فرد في اليوم</label><label class="toggle" style="margin-top:8px"><input type="checkbox" id="s-chain"' + (st.chainTrips ? " checked" : "") + '><span class="sw"></span>أكثر من مدينة في اليوم: خط سير واحد</label><label class="toggle" style="margin-top:8px"><input type="checkbox" id="s-merge"' + (st.mergeTrips ? " checked" : "") + '><span class="sw"></span>دمج خط السير في بند واحد</label><label class="toggle" style="margin-top:8px"><input type="checkbox" id="s-hidez"' + (st.hideZero ? " checked" : "") + '><span class="sw"></span>إخفاء البنود التي قيمتها صفر</label></section>';
     h += '<section class="panel"><div class="panel-hd"><div><h2>سيرفيس دمنهور</h2></div></div><div class="stack"><div class="pf set"><label>سعر السيرفيس الواحد</label>' + numInput(st.servicePrice, 'id="s-svc"') + '</div><div class="pf set"><label>العدد الافتراضي</label>' + numInput(st.serviceDefault, 'id="s-svcn"') + '</div><label class="toggle"><input type="checkbox" id="s-exon"' + (st.exceptionsOn ? " checked" : "") + '><span class="sw"></span>استثناءات (عدد مختلف)</label><div class="stack"' + (st.exceptionsOn ? "" : ' style="opacity:.45"') + ">" + st.exceptions.map((x, i) => '<div class="ex-row"><input class="txt" data-exn="' + i + '" value="' + esc(x.name) + '" placeholder="اسم الجهة">' + numInput(x.count, 'data-exc="' + i + '" style="width:60px"') + '<button class="icon-btn sm" data-exd="' + i + '" aria-label="حذف">' + ic.x + "</button></div>").join("") + '<button class="lnk" id="s-exadd">+ إضافة استثناء</button></div></div></section>';
     const zc = {};
     for (const x of ENG.M.visits) if (x.zero) zc[x.ek] = (zc[x.ek] || 0) + 1;
@@ -312,6 +312,8 @@ const VIEWS = (() => {
     chk("#s-nearint", i => st.carNearInternal = i.checked);
     chk("#s-once", i => st.internalOnce = i.checked);
     chk("#s-chain", i => st.chainTrips = i.checked);
+    chk("#s-merge", i => st.mergeTrips = i.checked);
+    chk("#s-hidez", i => st.hideZero = i.checked);
     chk("#s-carin", i => st.carInDamanhour = i.checked);
     chk("#s-exon", i => st.exceptionsOn = i.checked);
     chk("#s-zon", i => st.zeroOn = i.checked);
