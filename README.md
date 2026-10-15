@@ -71,9 +71,25 @@ One sheet with the header row `اليوم | جهة المرور | الغرض م�
 localStorage only: `addad2.settings` (now also `internalOnce`, `chainTrips`, `mergeTrips`, `hideZero`, `pairs`), `addad2.data`, `addad3.ui` (filters, view, exclusions), `addad3.act` (report options), `addad2.theme`. Old `sel` people tabs are migrated into the people filter.
 
 ## Files
-`index.html` · `css/style.css` · `js/{data,xlsx,ui,engine,picker,filters,io,report,activity,views,app}.js` · `images/` · `tests/sanity.js` (`node tests/sanity.js`: real-tariff scenarios and invariants for the cost rules)
+`index.html` · `css/style.css` · `js/{data,xlsx,ui,timeline,engine,picker,filters,io,report,activity,views,app}.js` · `images/` · `tests/sanity.js` (`node tests/sanity.js`: real-tariff scenarios and invariants for the cost rules) · `tests/ui.js` (`npm i --no-save jsdom` then `node tests/ui.js`: boots the real app and drives settings, editor, import/export, reports)
 
 ## Not yet
 - Old `.xls` format (save as xlsx).
 - Saved named filter presets.
 - Charts inside the PDF activity report (tables and bars only).
+
+
+## Dated prices and grades (v3.4)
+
+Every price and every grade can stay a single value (nothing changes) or carry periods. A period is `{ from?, to?, v }` with ISO dates; no `from` means since the beginning, no `to` means open-ended. The visit date picks the period; on overlap the latest `from` wins; a date outside all periods is unpriced (grades fall back to `defaultClass`). `TL` in `data.js` holds the pure rules (`at`, `clean`, `sanitize`, `label`); the engine only calls `TL.at(value, visit.d)`.
+
+- Covered values: city prices, city-pair prices, internal fee and car allowance per grade, the Damanhour service price, each person's grade, and each city's distance (`km`) and travel-allowance flag.
+- Editing: the calendar button beside any of those values opens the period editor (`js/timeline.js`); a dated value shows a chip with the period count. "قيمة واحدة" flattens it back.
+- Excel: the sheets المدن، الافراد، الدرجات، خطوط المدن take optional `من` / `إلى` columns (several rows per key; in المدن the price, distance and allowance columns each keep their own periods, and a blank cell in a dated row is ignored); new sheets `سعر السيرفيس` and `خيارات` (the calculation and display switches). Files without those columns import exactly as before; rows with an unreadable date are skipped and counted in the import summary.
+- Reports: a person whose grade changed in the period shows `الثالثة ثم الأولى`; the prices table lists every period.
+
+## Statements display
+
+- Merged route lines expand to their legs («الأجزاء»); excluding any stop of a merged route in edit mode excludes the whole route.
+- A «إظهار N بند صفري» button (statement and ledger views) reveals hidden zero lines for the session without changing the saved setting.
+- Settings: a «العرض» panel holds the merge and hide-zero switches; an «أسعار مطلوبة» panel lists unpriced cities and city pairs with inline entry.

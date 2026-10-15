@@ -25,11 +25,12 @@ function loadStore() {
         zeroEntities: Array.isArray(s.zeroEntities) ? s.zeroEntities : base.zeroEntities,
         classAmount: { ...base.classAmount, ...(s.classAmount || {}) },
         carAllowance: { ...base.carAllowance, ...(s.carAllowance || {}) },
-        pairs: Object.fromEntries(Object.entries(s.pairs && typeof s.pairs === "object" ? s.pairs : {}).filter(([k, n]) => k.includes("|") && typeof n === "number" && n >= 0)),
+        pairs: Object.fromEntries(Object.entries(s.pairs && typeof s.pairs === "object" ? s.pairs : {}).filter(([k]) => k.includes("|"))),
         org: { ...base.org, ...(s.org || {}) },
         entities: s.entities || {},
         people: { ...base.people, ...(s.people || {}) } };
       if (v < 10 && S.settings.people["شلتوت"]) S.settings.people["شلتوت"].cls = 1;
+      TL.sanitize(S.settings);
       if (v < base.v) saveSettings();
     } else S.settings = base;
   } catch (e) { S.settings = base; }

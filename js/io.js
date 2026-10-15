@@ -5,21 +5,34 @@ const IO = (() => {
   const num = v => { if (v == null || v === "") return null; const n = +String(v).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/[٫,]/g, "."); return isNaN(n) ? null : n; };
   const bool = v => v === true || v === 1 || /^(true|1|yes|نعم|✓|صح)$/i.test(String(v == null ? "" : v).trim());
   const stamp = () => UI.today();
+  const dateOf = (a, b) => {
+    const f = a == null || a === "" ? "" : ENG.toDate(a, "dmy"), t = b == null || b === "" ? "" : ENG.toDate(b, "dmy");
+    const bad = (a != null && a !== "" && !f) || (b != null && b !== "" && !t) || (f && t && f > t);
+    return { f, t, bad, dated: !!(f || t) };
+  };
+  const per = (v, d) => ({ ...(d && d.f ? { from: d.f } : {}), ...(d && d.t ? { to: d.t } : {}), v });
+  const acc = () => { const m = new Map(); return { add(k, p) { if (!m.has(k)) m.set(k, []); m.get(k).push(p); }, has: k => m.has(k), get: k => TL.clean(m.get(k)), each(fn) { for (const [k, a] of m) fn(k, TL.clean(a)); } }; };
+  const blank = v => v == null || v === "";
+  const badRows = (rows, i, j) => rows.filter(r => dateOf(r[i], r[j]).bad).length;
+  const span = p => [p.from || "", p.to || ""];
+  const OPTIONS = [["internalOnce", "بدل داخلي واحد لكل فرد في اليوم"], ["chainTrips", "خط سير واحد للأيام متعددة المدن"], ["mergeTrips", "دمج خط السير في بند واحد"], ["hideZero", "إخفاء البنود التي قيمتها صفر"], ["carNearInternal", "بالسيارة لمدينة بلا بدل سفر: صرف الداخلي"], ["carInDamanhour", "داخل دمنهور بالسيارة: صرف سيرفيس"]];
   const FIELD = { d: "التاريخ", e: "جهة المرور", g: "الغرض", p: "القائمون بالمرور", c: "سيارة الهيئة" };
 
   function settingsSheets() {
     const st = S.settings;
-    const cities = Object.keys(st.prices).sort((a, b) => (st.km[b] ?? -1) - (st.km[a] ?? -1));
+    const cities = Object.keys(st.prices).sort((a, b) => (TL.latest(st.km[b]) ?? -1) - (TL.latest(st.km[a]) ?? -1));
     const ents = { ...Object.fromEntries(Object.entries(ENTITY_INFO).map(([k, o]) => [k, o])) };
     for (const [k, o] of Object.entries(st.entities || {})) ents[k] = { ...(ents[k] || { name: o.name || k }), ...o };
     return [
-      { name: "المدن", cols: [22, 12, 12, 10], rows: [["المدينة", "السعر", "المسافة", "بدل سفر"], ...cities.map(c => [c, st.prices[c], st.km[c], !!st.allow[c]])] },
+      { name: "المدن", cols: [22, 12, 12, 10, 12, 12], rows: [["المدينة", "السعر", "المسافة", "بدل سفر", "من", "إلى"], ...cities.flatMap(c => [st.prices[c], st.km[c], st.allow[c]].some(TL.dated) ? [...TL.periods(st.prices[c]).map(p => [c, p.v, "", "", ...span(p)]), ...TL.periods(st.km[c]).map(p => [c, "", p.v, "", ...span(p)]), ...TL.periods(st.allow[c]).map(p => [c, "", "", p.v === true, ...span(p)])] : [[c, st.prices[c], st.km[c], !!st.allow[c], "", ""]])] },
       { name: "الجهات", cols: [36, 18, 16], rows: [["الجهة", "النوع", "المدينة"], ...Object.values(ents).sort((a, b) => String(a.city).localeCompare(String(b.city), "ar")).map(o => [o.name, o.type || "", o.city || ""])] },
-      { name: "الافراد", cols: [20, 10], rows: [["الاسم", "الدرجة"], ...Object.values(st.people).sort((a, b) => a.name.localeCompare(b.name, "ar")).map(p => [p.name, p.cls])] },
-      { name: "الدرجات", cols: [12, 14, 14], rows: [["الدرجة", "بدل داخلي", "بدل سفر"], ...[1, 2, 3].map(c => [c, st.classAmount[c], st.carAllowance[c]])] },
+      { name: "الافراد", cols: [20, 10, 12, 12], rows: [["الاسم", "الدرجة", "من", "إلى"], ...Object.values(st.people).sort((a, b) => a.name.localeCompare(b.name, "ar")).flatMap(p => TL.periods(p.cls).map(x => [p.name, x.v, ...span(x)]))] },
+      { name: "الدرجات", cols: [12, 14, 14, 12, 12], rows: [["الدرجة", "بدل داخلي", "بدل سفر", "من", "إلى"], ...[1, 2, 3].flatMap(c => TL.dated(st.classAmount[c]) || TL.dated(st.carAllowance[c]) ? [...TL.periods(st.classAmount[c]).map(p => [c, p.v, "", ...span(p)]), ...TL.periods(st.carAllowance[c]).map(p => [c, "", p.v, ...span(p)])] : [[c, st.classAmount[c], st.carAllowance[c], "", ""]])] },
+      { name: "سعر السيرفيس", cols: [14, 12, 12], rows: [["السعر", "من", "إلى"], ...TL.periods(st.servicePrice).map(p => [p.v, ...span(p)])] },
+      { name: "خيارات", cols: [46, 12], rows: [["الخيار", "مفعّل"], ...OPTIONS.map(([k, l]) => [l, !!st[k]])] },
       { name: "بدون تكلفة", cols: [30], rows: [["الجهة"], ...st.zeroEntities.filter(Boolean).map(z => [z])] },
       { name: "استثناءات السيرفيس", cols: [30, 12], rows: [["الجهة", "عدد السيرفيس"], ...st.exceptions.filter(x => x.name).map(x => [x.name, x.count])] },
-      { name: "خطوط المدن", cols: [22, 22, 12], rows: [["المدينة الأولى", "المدينة الثانية", "السعر"], ...[...new Set([...Object.keys(ENG.M.meta ? ENG.M.meta.pairs : {}), ...Object.keys(st.pairs)])].sort((a, b) => a.localeCompare(b, "ar")).map(k => [...k.split("|"), st.pairs[k] ?? null])] }
+      { name: "خطوط المدن", cols: [22, 22, 12, 12, 12], rows: [["المدينة الأولى", "المدينة الثانية", "السعر", "من", "إلى"], ...[...new Set([...Object.keys(ENG.M.meta ? ENG.M.meta.pairs : {}), ...Object.keys(st.pairs)])].sort((a, b) => a.localeCompare(b, "ar")).flatMap(k => TL.periods(st.pairs[k]).map(p => [...k.split("|"), p.v, ...span(p)]))] }
     ];
   }
 
@@ -46,20 +59,25 @@ const IO = (() => {
 
   function readSettings(sheets) {
     const out = [];
+    const skipNote = (rows, i, j) => { const n = badRows(rows, i, j); return n ? " · " + n + " صف بتاريخ غير صالح سيُتجاهل" : ""; };
     const c = findSheet(sheets, "المدن");
-    if (c) out.push({ key: "cities", label: "المدن (السعر · المسافة · بدل السفر)", n: body(c).length, apply: st => { for (const r of body(c)) { const n = String(r[0] || "").trim(); if (!n) continue; const name = canonCity(n); st.prices[name] = num(r[1]); st.km[name] = num(r[2]); st.allow[name] = bool(r[3]); } } });
+    if (c) out.push({ key: "cities", label: "المدن (السعر · المسافة · بدل السفر)" + skipNote(body(c), 4, 5), n: body(c).length, apply: st => { const pa = acc(), ka = acc(), aa = acc(), seen = new Set(); for (const r of body(c)) { const n = String(r[0] || "").trim(), d = dateOf(r[4], r[5]); if (!n || d.bad) continue; const name = canonCity(n); seen.add(name); if (!blank(r[1])) pa.add(name, per(num(r[1]), d)); if (!blank(r[2])) ka.add(name, per(num(r[2]), d)); if (!blank(r[3])) aa.add(name, per(bool(r[3]), d)); } for (const k of seen) { st.prices[k] = pa.has(k) ? pa.get(k) : null; st.km[k] = ka.has(k) ? ka.get(k) : null; st.allow[k] = aa.has(k) ? aa.get(k) : false; } } });
     const e = findSheet(sheets, "الجهات");
     if (e) out.push({ key: "ents", label: "الجهات (النوع · المدينة)", n: body(e).length, apply: st => { st.entities = st.entities || {}; for (const r of body(e)) { const n = String(r[0] || "").trim(); if (!n) continue; const k = NZ(n); const base = ENTITY_INFO[k]; const o = { name: n, type: String(r[1] || "").trim() || (base && base.type) || UNTYPED, city: r[2] ? canonCity(String(r[2]).trim()) : (base && base.city) || null }; if (!base || base.type !== o.type || base.city !== o.city) st.entities[k] = o; } } });
     const p = findSheet(sheets, "الافراد");
-    if (p) out.push({ key: "people", label: "الأفراد ودرجاتهم", n: body(p).length, apply: st => { for (const r of body(p)) { const n = String(r[0] || "").trim(); if (!n) continue; st.people[ENG.personKey(n)] = { name: n, cls: clsFrom(r[1]) || st.defaultClass }; } } });
+    if (p) out.push({ key: "people", label: "الأفراد ودرجاتهم" + skipNote(body(p), 2, 3), n: body(p).length, apply: st => { const pa = acc(), names = new Map(); for (const r of body(p)) { const n = String(r[0] || "").trim(), d = dateOf(r[2], r[3]), g = clsFrom(r[1]); if (!n || d.bad || (g == null && d.dated)) continue; const k = ENG.personKey(n); names.set(k, n); pa.add(k, per(g || st.defaultClass, d)); } pa.each((k, v) => st.people[k] = { name: names.get(k), cls: v }); } });
     const g = findSheet(sheets, "الدرجات");
-    if (g) out.push({ key: "grades", label: "مبالغ الدرجات", n: body(g).length, apply: st => { for (const r of body(g)) { const c = clsFrom(r[0]); if (!c) continue; st.classAmount[c] = num(r[1]); st.carAllowance[c] = num(r[2]); } } });
+    if (g) out.push({ key: "grades", label: "مبالغ الدرجات" + skipNote(body(g), 3, 4), n: body(g).length, apply: st => { const am = acc(), al = acc(), seen = new Set(); for (const r of body(g)) { const c = clsFrom(r[0]), d = dateOf(r[3], r[4]); if (!c || d.bad) continue; seen.add(c); const a = num(r[1]), b = num(r[2]); if (a != null) am.add(c, per(a, d)); if (b != null) al.add(c, per(b, d)); } for (const c of seen) { if (!am.has(c)) st.classAmount[c] = null; if (!al.has(c)) st.carAllowance[c] = null; } am.each((k, v) => st.classAmount[k] = v); al.each((k, v) => st.carAllowance[k] = v); } });
+    const op = findSheet(sheets, "خيارات");
+    if (op) out.push({ key: "options", label: "خيارات الحساب والعرض", n: body(op).length, apply: st => { for (const r of body(op)) { const o = OPTIONS.find(([, l]) => NZ(l) === NZ(r[0])); if (o) st[o[0]] = bool(r[1]); } } });
+    const sv = findSheet(sheets, "سعر السيرفيس");
+    if (sv) out.push({ key: "service", label: "سعر السيرفيس" + skipNote(body(sv), 1, 2), n: body(sv).length, apply: st => { const pa = acc(); for (const r of body(sv)) { const d = dateOf(r[1], r[2]); if (d.bad) continue; pa.add("s", per(num(r[0]), d)); } pa.each((k, v) => st.servicePrice = v); } });
     const z = findSheet(sheets, "بدون تكلفة");
     if (z) out.push({ key: "zero", label: "جهات بدون تكلفة", n: body(z).length, apply: st => { st.zeroEntities = body(z).map(r => String(r[0] || "").trim()).filter(Boolean); } });
     const x = findSheet(sheets, "استثناءات السيرفيس");
     if (x) out.push({ key: "exc", label: "استثناءات السيرفيس", n: body(x).length, apply: st => { st.exceptions = body(x).map(r => ({ name: String(r[0] || "").trim(), count: num(r[1]) || 4 })).filter(o => o.name); } });
     const q = findSheet(sheets, "خطوط المدن");
-    if (q) out.push({ key: "pairs", label: "الخطوط بين المدن (السعر)", n: body(q).length, apply: st => { for (const r of body(q)) { const a = canonCity(String(r[0] || "").trim()), b = canonCity(String(r[1] || "").trim()), n = num(r[2]); if (!a || !b || a === b || n == null || n < 0) continue; st.pairs[pairKey(a, b)] = n; } } });
+    if (q) out.push({ key: "pairs", label: "الخطوط بين المدن (السعر)" + skipNote(body(q), 3, 4), n: body(q).length, apply: st => { const pa = acc(); for (const r of body(q)) { const a = canonCity(String(r[0] || "").trim()), b = canonCity(String(r[1] || "").trim()), n = num(r[2]), d = dateOf(r[3], r[4]); if (!a || !b || a === b || n == null || n < 0 || d.bad) continue; pa.add(pairKey(a, b), per(n, d)); } pa.each((k, v) => st.pairs[k] = v); } });
     return out;
   }
 
@@ -171,6 +189,7 @@ const IO = (() => {
   function commit(picked, file, sets, mode) {
     const snap = { raw: S.raw, file: S.file, sheet: S.sheet, settings: JSON.stringify(S.settings), filters: JSON.stringify(S.filters) };
     sets.forEach(s => s.apply(S.settings));
+    TL.sanitize(S.settings);
     if (sets.length) saveSettings();
     if (!picked.length) { rebuild(); render(); UI.toast("✓ " + sets.length + " قائمة"); return; }
     const incoming = picked.flatMap(r => r.rows);
@@ -213,7 +232,7 @@ const IO = (() => {
 
   function exportExcel(R) {
     const head = ["الاسم", "الدرجة", "الزيارات", "بالسيارة", "انتقال", "داخلي", "سيرفيس", "بدل سفر", "الإجمالي", "بنود بلا سعر"];
-    const sum = R.persons.map(p => [p.name, CLS_AR[p.cls], p.items.length, p.car, p.k.travel, p.k.class, p.k.service, p.k.allow, p.sum, p.miss]);
+    const sum = R.persons.map(p => [p.name, ENG.clsLabel(p, CLS_AR), p.items.length, p.car, p.k.travel, p.k.class, p.k.service, p.k.allow, p.sum, p.miss]);
     const tot = ["الإجمالي", "", sum.reduce((s, r) => s + r[2], 0), sum.reduce((s, r) => s + r[3], 0), ...[4, 5, 6, 7, 8, 9].map(i => sum.reduce((s, r) => s + r[i], 0))];
     const lines = [["الاسم", "التاريخ", "اليوم", "جهة المرور", "نوع الجهة", "المدينة", "المسافة", "الغرض", "سيارة الهيئة", "البيان", "التفصيل", "المبلغ"]];
     for (const p of R.persons) for (const it of [...p.items].sort((a, b) => a.v.d < b.v.d ? -1 : 1)) for (const l of it.ls) lines.push([p.name, it.v.d, UI.wday(it.v.d), it.v.ent, it.v.type, it.v.city || "", it.v.km, it.v.g, it.p.car, l.t, l.note || "", l.a]);

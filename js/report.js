@@ -67,7 +67,7 @@ const REPORT = (() => {
         h += '<div class="r-kpis"><div><span>عدد الزيارات</span><b>' + R.visits.length + "</b></div><div><span>عدد الأفراد</span><b>" + R.persons.length + "</b></div><div><span>مشاركات بالسيارة</span><b>" + t.car + " <small>من " + t.n + '</small></b></div><div class="hero"><span>إجمالي المستحق</span><b>' + fm2(R.total) + " <small>جنيه</small></b></div></div>";
         h += '<div class="r-break">' + [["انتقال ذهاب وعودة", t.travel], ["بدل داخلي", t.class], ["سيرفيس دمنهور", t.service], ["بدل سفر بالسيارة", t.allow]].map(([l, a]) => "<div><span>" + l + "</span><b>" + fm2(a) + '</b><i style="--w:' + (R.total ? Math.round(a / R.total * 100) : 0) + '%"></i></div>').join("") + "</div>";
       }
-      h += '<table class="r-tbl r-sum">' + thead + "<tbody>" + ch.map(p => { idx++; return '<tr><td class="c-n">' + idx + "</td><td><b>" + esc(p.name) + "</b></td><td>" + CLS[p.cls] + '</td><td class="c-r">' + p.items.length + '</td><td class="c-r">' + fm2(p.k.travel) + '</td><td class="c-r">' + fm2(p.k.class) + '</td><td class="c-r">' + fm2(p.k.service) + '</td><td class="c-r">' + fm2(p.k.allow) + '</td><td class="c-r"><b>' + fm2(p.sum) + "</b>" + (p.miss ? '<small class="r-nil">+' + p.miss + " بلا سعر</small>" : "") + '</td><td class="c-sig"></td></tr>'; }).join("") + "</tbody>" + (ci === chunks.length - 1 ? tfoot : "") + "</table>";
+      h += '<table class="r-tbl r-sum">' + thead + "<tbody>" + ch.map(p => { idx++; return '<tr><td class="c-n">' + idx + "</td><td><b>" + esc(p.name) + "</b></td><td>" + ENG.clsLabel(p, CLS) + '</td><td class="c-r">' + p.items.length + '</td><td class="c-r">' + fm2(p.k.travel) + '</td><td class="c-r">' + fm2(p.k.class) + '</td><td class="c-r">' + fm2(p.k.service) + '</td><td class="c-r">' + fm2(p.k.allow) + '</td><td class="c-r"><b>' + fm2(p.sum) + "</b>" + (p.miss ? '<small class="r-nil">+' + p.miss + " بلا سعر</small>" : "") + '</td><td class="c-sig"></td></tr>'; }).join("") + "</tbody>" + (ci === chunks.length - 1 ? tfoot : "") + "</table>";
       if (ci === chunks.length - 1 && !closeSeparate) h += closing;
       h += "</div>";
       pages.push(h);
@@ -97,7 +97,7 @@ const REPORT = (() => {
     let seq = 0;
     const pages = chunks.map((ch, ci) => {
       let h = '<section class="r-page">' + header(st, "كشف بدل انتقال · " + P.name, period + (ci ? " · تابع" : ""), ref) + '<div class="r-body">';
-      if (ci === 0) h += '<div class="r-person"><div class="big"><span>الاسم</span><b>' + esc(P.name) + "</b></div><div><span>الدرجة</span><b>" + CLS[P.cls] + "</b></div><div><span>الزيارات</span><b>" + all.length + "</b></div><div><span>بسيارة الهيئة</span><b>" + P.car + "</b></div><div><span>المسافة</span><b>" + UI.fm(P.km) + " <small>كم</small></b></div></div>";
+      if (ci === 0) h += '<div class="r-person"><div class="big"><span>الاسم</span><b>' + esc(P.name) + "</b></div><div><span>الدرجة</span><b>" + ENG.clsLabel(P, CLS) + "</b></div><div><span>الزيارات</span><b>" + all.length + "</b></div><div><span>بسيارة الهيئة</span><b>" + P.car + "</b></div><div><span>المسافة</span><b>" + UI.fm(P.km) + " <small>كم</small></b></div></div>";
       h += '<table class="r-tbl r-stmt">' + thead + "<tbody>";
       if (ci > 0) h += '<tr class="r-carry"><td colspan="4">رصيد منقول من الصفحة السابقة</td><td class="c-r">' + fm2(carry[ci - 1]) + "</td></tr>";
       for (const it of ch) {

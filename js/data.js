@@ -232,10 +232,48 @@ const ENTITY_INFO = (() => {
   return o;
 })();
 
+const TL = (() => {
+  const ISO = /^\d{4}-\d{2}-\d{2}$/;
+  const isNum = v => typeof v === "number" && isFinite(v) && v >= 0;
+  const okPeriod = p => p && typeof p === "object" && (p.v == null || isNum(p.v) || typeof p.v === "boolean") && (!p.from || ISO.test(p.from)) && (!p.to || ISO.test(p.to)) && !(p.from && p.to && p.from > p.to);
+  const dated = val => Array.isArray(val);
+  function at(val, d) {
+    if (!dated(val)) return val == null ? null : val;
+    let best = null;
+    for (const p of val) {
+      if (d && ((p.from && d < p.from) || (p.to && d > p.to))) continue;
+      if (!best || (p.from || "") >= (best.from || "")) best = p;
+    }
+    return best && best.v != null ? best.v : null;
+  }
+  function clean(val) {
+    if (!dated(val)) return typeof val === "boolean" ? val : val == null || val === "" ? null : isNum(+val) ? +val : null;
+    const a = val.filter(okPeriod).map(p => ({ ...(p.from ? { from: p.from } : {}), ...(p.to ? { to: p.to } : {}), v: p.v == null ? null : p.v }));
+    a.sort((x, y) => (x.from || "").localeCompare(y.from || "") || (x.to || "~").localeCompare(y.to || "~"));
+    if (!a.length) return null;
+    return a.length === 1 && !a[0].from && !a[0].to ? a[0].v : a;
+  }
+  const periods = val => dated(val) ? val.map(p => ({ ...p })) : [{ v: val == null ? null : val }];
+  const latest = val => at(val, null);
+  const label = (val, fm = String) => {
+    if (!dated(val)) return val == null ? "—" : fm(val);
+    return val.map(p => (p.v == null ? "—" : fm(p.v)) + (p.from ? " من " + p.from : "") + (p.to ? " حتى " + p.to : "")).join(" · ");
+  };
+  function sanitize(st) {
+    for (const m of [st.prices, st.classAmount, st.carAllowance, st.km, st.allow]) if (m) for (const k of Object.keys(m)) m[k] = clean(m[k]);
+    if (st.pairs) for (const k of Object.keys(st.pairs)) { const n = clean(st.pairs[k]); if (n == null) delete st.pairs[k]; else st.pairs[k] = n; }
+    st.servicePrice = clean(st.servicePrice);
+    if (st.people) for (const p of Object.values(st.people)) { const c = clean(p.cls); p.cls = c == null ? st.defaultClass : c; }
+    return st;
+  }
+  const plain = (val, fm = String) => dated(val) ? label(val, fm) : val;
+  return { at, clean, dated, periods, latest, label, sanitize, plain };
+})();
+
 const DEFAULT_PEOPLE = { "اباظة": 1, "لبنى": 1, "أماني": 1, "غادة": 1, "شوقي": 2, "شلتوت": 1, "هنداوي": 1, "أديب": 1, "صبحي": 1 };
 
 const DEFAULT_SETTINGS = {
-  v: 10,
+  v: 11,
   entities: {},
   org: { name: "الهيئة العامة للتأمين الصحي", branch: "فرع البحيرة", title: "كشف بدلات الانتقال والسفر", signs: ["المختص", "المراجع", "مدير الإدارة"] },
   prices: Object.fromEntries(CITY_DEFS.map(d => [d[0], d[1]])),

@@ -22,7 +22,7 @@ const ACT = (() => {
   const CLS = ["", "الأولى", "الثانية", "الثالثة"];
   const KEY = "addad3.act";
   const PRICE_TAG = "بالأسعار الحالية";
-  const pairsUsed = R => { const m = new Map(); for (const it of R.items) for (const l of it.raw) if (l.pair && !m.has(l.pair)) m.set(l.pair, S.settings.pairs[l.pair] ?? null); return [...m].sort((a, b) => a[0].localeCompare(b[0], "ar")); };
+  const pairsUsed = R => { const m = new Map(); for (const it of R.items) for (const l of it.raw) if (l.pair) { const o = m.get(l.pair) || [l.pair, S.settings.pairs[l.pair] ?? null, false]; if (l.est) o[2] = true; m.set(l.pair, o); } return [...m.values()].sort((a, b) => a[0].localeCompare(b[0], "ar")); };
 
   function loadOpts() {
     const base = { scope: "view", sections: Object.fromEntries(SECTIONS.map(([k, , on]) => [k, on])), arabic: !!S.settings.org.arabicDigits, title: "تقرير نشاط المرور", v: 2 };
@@ -81,7 +81,7 @@ const ACT = (() => {
     const cities = group(it => it.v.city || "?", k => k === "?" ? "غير معروفة" : k).sort((a, b) => b.a - a.a);
     const months = group(it => it.v.m, k => UI.mlabel(k)).sort((a, b) => a.k < b.k ? -1 : 1);
     const ents = group(it => it.v.ek, (k, it) => it.v.ent).sort((a, b) => b.a - a.a);
-    const people = R.persons.map(p => ({ k: p.key, l: p.name, cls: p.cls, v: p.visits, a: p.items.length, car: p.car, nocar: p.nocar, plan: p.plan, insp: p.insp, other: p.other, sum: p.sum, miss: p.miss, carSum: p.carSum, nocarSum: p.sum - p.carSum, alt: p.alt, save: p.save, altMiss: p.altMiss, k4: p.k, items: p.items })).sort((a, b) => b.v - a.v || b.a - a.a);
+    const people = R.persons.map(p => ({ k: p.key, l: p.name, cls: p.cls, cl: ENG.clsLabel(p, CLS), v: p.visits, a: p.items.length, car: p.car, nocar: p.nocar, plan: p.plan, insp: p.insp, other: p.other, sum: p.sum, miss: p.miss, carSum: p.carSum, nocarSum: p.sum - p.carSum, alt: p.alt, save: p.save, altMiss: p.altMiss, k4: p.k, items: p.items })).sort((a, b) => b.v - a.v || b.a - a.a);
     const pcols = purp.slice(0, purp.length > 8 ? 7 : 8);
     const prestN = purp.length - pcols.length;
     const keep = new Set(pcols.map(x => x.k));
@@ -118,7 +118,7 @@ const ACT = (() => {
       const max = Math.max(1, ...C.people.map(r => r.a));
       B.push({ t: "table", title: "حسب الفرد", sub: C.people.length + " فرد · الزيارات بعد الدمج، والأنشطة بعدد الصفوف",
         head: '<tr><th class="c-n">م</th><th>الاسم</th><th>الدرجة</th><th class="c-r">الزيارات</th><th class="c-r">الأنشطة</th><th class="a-bc"></th><th class="c-r">بالسيارة</th><th class="c-r">بدونها</th><th class="c-r">خطة</th><th class="c-r">فحص</th><th class="c-r">أخرى</th></tr>',
-        rows: C.people.map((r, i) => '<tr><td class="c-n">' + (i + 1) + "</td><td><b>" + esc(r.l) + "</b></td><td>" + CLS[r.cls] + '</td><td class="c-r"><b>' + r.v + '</b></td><td class="c-r">' + r.a + "</td><td>" + bar(r.a, max) + '</td><td class="c-r">' + num(r.car) + '</td><td class="c-r">' + num(r.nocar) + '</td><td class="c-r">' + num(r.plan) + '</td><td class="c-r">' + num(r.insp) + '</td><td class="c-r">' + num(r.other) + "</td></tr>"),
+        rows: C.people.map((r, i) => '<tr><td class="c-n">' + (i + 1) + "</td><td><b>" + esc(r.l) + "</b></td><td>" + r.cl + '</td><td class="c-r"><b>' + r.v + '</b></td><td class="c-r">' + r.a + "</td><td>" + bar(r.a, max) + '</td><td class="c-r">' + num(r.car) + '</td><td class="c-r">' + num(r.nocar) + '</td><td class="c-r">' + num(r.plan) + '</td><td class="c-r">' + num(r.insp) + '</td><td class="c-r">' + num(r.other) + "</td></tr>"),
         foot: '<tr><td></td><td colspan="3">الإجمالي</td><td class="c-r">' + T.acts + '</td><td></td><td class="c-r">' + T.carA + '</td><td class="c-r">' + T.nocarA + '</td><td colspan="3" class="c-r a-fn2">خطة/فحص/أخرى بعدد الزيارات</td></tr>' });
     }
     if (X.peoplePurp && C.pcols.length) {
@@ -141,7 +141,7 @@ const ACT = (() => {
       B.push({ t: "html", html: '<section class="a-sec a-cost"><h3>ملخص التكلفة والتوفير <small>(' + PRICE_TAG + ')</small></h3><div class="a-cost-in"><div class="a-cost-tot"><span>إجمالي التكلفة التقديرية</span><b>' + fm2(T.sum) + " <small>جنيه</small></b>" + (T.miss ? "<em>+ " + T.miss + " بند بلا سعر لم يُحتسب</em>" : "") + '</div><div class="a-cost-k">' + KIND_ROWS.map(([k, l]) => "<div><span>" + l + "</span><b>" + fm2(T.kind[k]) + "</b><small>" + pct(T.kind[k], T.sum) + "%</small></div>").join("") + "</div></div>" +
         '<div class="a-save"><div><span>تكلفة أنشطة السيارة (' + T.carA + ")</span><b>" + fm2(T.carSum) + "</b></div><div><span>تكلفة الأنشطة بدون سيارة (" + T.nocarA + ")</span><b>" + fm2(T.nocarSum) + "</b></div><div><span>لو تمت كلها بدون سيارة</span><b>" + fm2(noCarTotal) + '</b></div><div class="hl"><span>وفّرته سيارة الهيئة</span><b>' + signed(T.save) + "</b><small>" + pct(T.save, noCarTotal) + "% من التكلفة البديلة</small></div></div>" +
         (T.altMiss ? '<p class="a-fn">' + T.altMiss + " نشاط بالسيارة لم يُحسب له توفير لعدم وجود سعر للمدينة.</p>" : "") + (R.est ? '<p class="a-fn">' + R.est + " بند انتقال بين مدينتين محسوب بسعر تقديري إلى أن يُحدَّد سعر الخط.</p>" : "") +
-        '<p class="a-fn">أساس الحساب: سيرفيس دمنهور ' + fm(st.servicePrice) + " جنيه للمرة · بدل داخلي " + [1, 2, 3].map(c => CLS[c] + " " + fm(st.classAmount[c])).join("، ") + " · بدل سفر بالسيارة " + [1, 2, 3].map(c => CLS[c] + " " + fm(st.carAllowance[c])).join("، ") + (st.internalOnce ? " · البدل الداخلي مرة واحدة لكل فرد في اليوم" : "") + (st.chainTrips ? " · اليوم متعدد المدن يُحسب كخط سير واحد" : "") + ".</p></section>" });
+        '<p class="a-fn">أساس الحساب: سيرفيس دمنهور ' + TL.label(st.servicePrice, fm) + " جنيه للمرة · بدل داخلي " + [1, 2, 3].map(c => CLS[c] + " " + TL.label(st.classAmount[c], fm)).join("، ") + " · بدل سفر بالسيارة " + [1, 2, 3].map(c => CLS[c] + " " + TL.label(st.carAllowance[c], fm)).join("، ") + (st.internalOnce ? " · البدل الداخلي مرة واحدة لكل فرد في اليوم" : "") + (st.chainTrips ? " · اليوم متعدد المدن يُحسب كخط سير واحد" : "") + ".</p></section>" });
     }
     if (X.costPeople) {
       const ps = [...C.people].sort((a, b) => b.sum - a.sum);
@@ -168,14 +168,14 @@ const ACT = (() => {
     if (X.costPurp) costGrp("التكلفة حسب الغرض", C.purp, "الغرض");
     if (X.costMonths) costGrp("التكلفة حسب الشهر", C.months, "الشهر");
     if (X.prices) {
-      const used = [...new Set(R.items.map(it => it.v.city).filter(c => c && c !== DAMANHOUR))].sort((a, b) => (st.prices[b] ?? -1) - (st.prices[a] ?? -1));
+      const used = [...new Set(R.items.map(it => it.v.city).filter(c => c && c !== DAMANHOUR))].sort((a, b) => (TL.latest(st.prices[b]) ?? -1) - (TL.latest(st.prices[a]) ?? -1));
       B.push({ t: "table", title: "الأسعار المستخدمة في الحساب", sub: "سعر الاتجاه الواحد للمدن الواردة في هذا التقرير · " + PRICE_TAG,
         head: '<tr><th class="c-n">م</th><th>المدينة</th><th class="c-r">السعر (اتجاه)</th><th class="c-r">ذهاب وعودة</th><th class="c-r">المسافة كم</th><th>بدل سفر بالسيارة</th></tr>',
-        rows: used.map((c, i) => '<tr><td class="c-n">' + (i + 1) + "</td><td>" + esc(c) + '</td><td class="c-r">' + (st.prices[c] == null ? "غير محدد" : fm2(st.prices[c])) + '</td><td class="c-r">' + (st.prices[c] == null ? "—" : fm2(st.prices[c] * 2)) + '</td><td class="c-r">' + (st.km[c] == null ? "—" : fm(st.km[c])) + "</td><td>" + (ENG.isFar(c) ? "يستحق" : "لا") + "</td></tr>"), foot: "" });
+        rows: used.map((c, i) => '<tr><td class="c-n">' + (i + 1) + "</td><td>" + esc(c) + '</td><td class="c-r">' + (st.prices[c] == null ? "غير محدد" : TL.label(st.prices[c], fm2)) + '</td><td class="c-r">' + (TL.latest(st.prices[c]) == null ? "—" : fm2(TL.latest(st.prices[c]) * 2)) + '</td><td class="c-r">' + (st.km[c] == null ? "—" : TL.label(st.km[c], fm)) + "</td><td>" + (st.allowMode === "city" && TL.dated(st.allow[c]) ? TL.label(st.allow[c], x => x ? "يستحق" : "لا") : ENG.isFar(c) ? "يستحق" : "لا") + "</td></tr>"), foot: "" });
       const pu = pairsUsed(R);
       if (pu.length) B.push({ t: "table", title: "الخطوط بين المدن المستخدمة", sub: "سعر الاتجاه الواحد بين مدينتين في الأيام متعددة المدن · " + PRICE_TAG,
         head: '<tr><th class="c-n">م</th><th>الخط</th><th class="c-r">السعر (اتجاه)</th><th>الحالة</th></tr>',
-        rows: pu.map(([k, n], i) => '<tr><td class="c-n">' + (i + 1) + "</td><td>" + esc(k.split("|").join(" ↔ ")) + '</td><td class="c-r">' + (n == null ? "—" : fm2(n)) + "</td><td>" + (n == null ? "تقديري" : "محدد") + "</td></tr>"), foot: "" });
+        rows: pu.map(([k, n, e], i) => '<tr><td class="c-n">' + (i + 1) + "</td><td>" + esc(k.split("|").join(" ↔ ")) + '</td><td class="c-r">' + (n == null ? "—" : TL.label(n, fm2)) + "</td><td>" + (e ? "تقديري" : "محدد") + "</td></tr>"), foot: "" });
     }
     return B;
   }
@@ -294,7 +294,7 @@ const ACT = (() => {
     sheets.push({ name: "الملخص", cols: [30, 70], rows: sum });
     const g = (k, name, rows, first) => { if (!X[k]) return; sheets.push({ name, cols: [30, 10, 10, 14, 14, 10], total: true, rows: [[first, "الزيارات", "الأنشطة", "نشاط بالسيارة", "نشاط بدون سيارة", "النسبة %"], ...rows.map(r => [r.l, r.v, r.a, r.car, r.nocar, pct(r.a, T.acts)]), ["الإجمالي", T.visits, T.acts, T.carA, T.nocarA, 100]] }); };
     g("purp", "حسب الغرض", C.purp, "الغرض");
-    if (X.people) sheets.push({ name: "حسب الفرد", cols: [18, 10, 10, 10, 10, 10, 10, 10, 10], total: true, rows: [["الاسم", "الدرجة", "الزيارات", "الأنشطة", "بالسيارة", "بدون سيارة", "خطة (زيارات)", "فحص (زيارات)", "أخرى (زيارات)"], ...C.people.map(p => [p.l, CLS[p.cls], p.v, p.a, p.car, p.nocar, p.plan, p.insp, p.other]), ["الإجمالي", "", "", T.acts, T.carA, T.nocarA, "", "", ""]] });
+    if (X.people) sheets.push({ name: "حسب الفرد", cols: [18, 10, 10, 10, 10, 10, 10, 10, 10], total: true, rows: [["الاسم", "الدرجة", "الزيارات", "الأنشطة", "بالسيارة", "بدون سيارة", "خطة (زيارات)", "فحص (زيارات)", "أخرى (زيارات)"], ...C.people.map(p => [p.l, p.cl, p.v, p.a, p.car, p.nocar, p.plan, p.insp, p.other]), ["الإجمالي", "", "", T.acts, T.carA, T.nocarA, "", "", ""]] });
     if (X.peoplePurp) {
       const all = C.purp;
       sheets.push({ name: "الأفراد × الغرض", cols: [18, ...all.map(() => 14), 10], total: true, rows: [["الاسم", ...all.map(c => c.l), "الإجمالي"], ...C.people.map(p => { const c = {}; for (const it of p.items) c[it.v.V.pk] = (c[it.v.V.pk] || 0) + 1; return [p.l, ...all.map(x => c[x.k] || 0), p.a]; }), ["الإجمالي", ...all.map(x => x.a), T.acts]] });
@@ -310,7 +310,7 @@ const ACT = (() => {
     cg("costMonths", "التكلفة حسب الشهر", C.months, "الشهر");
     if (X.prices) {
       const used = [...new Set(R.items.map(it => it.v.city).filter(c => c && c !== DAMANHOUR))];
-      sheets.push({ name: "الأسعار المستخدمة", cols: [26, 14, 12, 10], rows: [["المدينة", "السعر (اتجاه)", "المسافة كم", "بدل سفر"], ...used.map(c => [c, st.prices[c], st.km[c], !!ENG.isFar(c)]), [], ...(pairsUsed(R).length ? [["خط بين مدينتين", "", "السعر (اتجاه)"], ...pairsUsed(R).map(([k, n]) => [...k.split("|"), n == null ? "تقديري" : n]), []] : []), ["سيرفيس دمنهور", st.servicePrice], ...[1, 2, 3].map(c => ["بدل داخلي · " + CLS[c], st.classAmount[c]]), ...[1, 2, 3].map(c => ["بدل سفر بالسيارة · " + CLS[c], st.carAllowance[c]])] });
+      sheets.push({ name: "الأسعار المستخدمة", cols: [26, 14, 12, 10], rows: [["المدينة", "السعر (اتجاه)", "المسافة كم", "بدل سفر"], ...used.map(c => [c, TL.plain(st.prices[c]), TL.plain(st.km[c]), st.allowMode === "city" && TL.dated(st.allow[c]) ? TL.label(st.allow[c], x => x ? "يستحق" : "لا") : !!ENG.isFar(c)]), [], ...(pairsUsed(R).length ? [["خط بين مدينتين", "", "السعر (اتجاه)"], ...pairsUsed(R).map(([k, n, e]) => [...k.split("|"), e ? "تقديري" : TL.plain(n)]), []] : []), ["سيرفيس دمنهور", TL.plain(st.servicePrice)], ...[1, 2, 3].map(c => ["بدل داخلي · " + CLS[c], TL.plain(st.classAmount[c])]), ...[1, 2, 3].map(c => ["بدل سفر بالسيارة · " + CLS[c], TL.plain(st.carAllowance[c])])] });
     }
     UI.download("addad-activity_" + (o.scope === "all" ? "all" : IO.periodName()) + ".xlsx", XL.write(sheets));
     UI.toast("✓ Excel");

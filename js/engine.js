@@ -239,7 +239,7 @@ const ENG = (() => {
     return { rows: out, stat };
   }
 
-  const SETTING_SHEETS = ["المدن", "الافراد", "الجهات", "بدون تكلفه", "الدرجات", "استثناءات السيرفيس", "خطوط المدن"].map(NZ);
+  const SETTING_SHEETS = ["المدن", "الافراد", "الجهات", "بدون تكلفه", "الدرجات", "استثناءات السيرفيس", "خطوط المدن", "سعر السيرفيس", "خيارات"].map(NZ);
 
   const fingerprint = (rows, hdr) => hdr < 0 ? "" : (rows[hdr] || []).map(c => NZ(c)).join("|");
   function rememberCols(res) {
@@ -396,12 +396,16 @@ const ENG = (() => {
     };
   }
 
-  const kmOf = c => c === DAMANHOUR ? 0 : c && S.settings.km[c] != null ? +S.settings.km[c] : null;
-  const isFar = c => {
+  const kmOf = (c, d) => {
+    if (c === DAMANHOUR) return 0;
+    const k = c ? TL.at(S.settings.km[c], d) : null;
+    return k == null ? null : +k;
+  };
+  const isFar = (c, d) => {
     if (c === DAMANHOUR) return false;
     if (!c) return null;
-    if (S.settings.allowMode === "city") { const a = S.settings.allow[c]; return a == null ? null : !!a; }
-    const k = kmOf(c);
+    if (S.settings.allowMode === "city") { const a = TL.at(S.settings.allow[c], d); return a == null ? null : !!a; }
+    const k = kmOf(c, d);
     return k == null ? null : k >= S.settings.farKm;
   };
   const zeroSet = () => new Set(S.settings.zeroOn ? S.settings.zeroEntities.filter(Boolean).map(NZ) : []);
@@ -427,9 +431,11 @@ const ENG = (() => {
   }
 
   const CLS_NAME = ["", "الأولى", "الثانية", "الثالثة"];
+  const clsLabel = (p, names = CLS_NAME) => p.clsSeq && p.clsSeq.length > 1 ? p.clsSeq.map(c => names[c]).join(" ثم ") : names[p.cls];
   const ONCE_NOTE = "داخلي مصروف مرة واحدة في اليوم";
   const kmText = v => v.km == null || v.city === DAMANHOUR ? "" : v.km + " كم";
-  const isTrip = v => !v.zero && v.city && v.city !== DAMANHOUR && S.settings.prices[v.city] != null;
+  const isTrip = v => !v.zero && v.city && v.city !== DAMANHOUR && TL.at(S.settings.prices[v.city], v.d) != null;
+  const amtOn = (m, c, d) => TL.at(m[c], d);
 
   function lines(v, p, trip) {
     const st = S.settings;
@@ -438,31 +444,31 @@ const ENG = (() => {
     if (v.zero) return [{ t: to + (v.city === DAMANHOUR ? " (بدمنهور)" : " والعودة"), note: "جهة بدون تكلفة", a: 0, kind: "zero" }];
     if (v.city === DAMANHOUR) {
       if (p.car && !st.carInDamanhour) return [{ t: to + " (بدمنهور)", note: "بسيارة الهيئة", a: 0, kind: "car" }];
-      const sc = serviceCount(v.ek);
-      return [{ t: to + " (بدمنهور)", note: "سيرفيس " + UI.fm(st.servicePrice) + " × " + sc.n, q: sc.n, a: st.servicePrice == null ? null : st.servicePrice * sc.n, kind: "service", ex: sc.ex }];
+      const sc = serviceCount(v.ek), sp = TL.at(st.servicePrice, v.d);
+      return [{ t: to + " (بدمنهور)", note: "سيرفيس " + UI.fm(sp) + " × " + sc.n, q: sc.n, a: sp == null ? null : sp * sc.n, kind: "service", ex: sc.ex }];
     }
     if (p.car) {
       if (v.far === null) return [{ t: to + " والعودة بدل سفر", note: "بسيارة الهيئة · غير معروف الاستحقاق", a: null, kind: "allow" }];
-      if (v.far) return [{ t: to + " والعودة بدل سفر", note: "بسيارة الهيئة" + (kmT ? " · " + kmT : ""), a: st.carAllowance[p.cls], kind: "allow" }];
-      if (st.carNearInternal) return [{ t: v.ent + " داخلي", note: "بسيارة الهيئة", a: st.classAmount[p.cls], kind: "class" }];
+      if (v.far) return [{ t: to + " والعودة بدل سفر", note: "بسيارة الهيئة" + (kmT ? " · " + kmT : ""), a: amtOn(st.carAllowance, p.cls, v.d), kind: "allow" }];
+      if (st.carNearInternal) return [{ t: v.ent + " داخلي", note: "بسيارة الهيئة", a: amtOn(st.classAmount, p.cls, v.d), kind: "class" }];
       return [{ t: to + " والعودة", note: "بسيارة الهيئة · لا يستحق بدل سفر", a: 0, kind: "car" }];
     }
-    const price = v.city ? st.prices[v.city] : null;
+    const price = v.city ? TL.at(st.prices[v.city], v.d) : null;
     return [
       ...(trip || [{ t: to + " والعودة", note: (price == null ? "سعر غير محدد" : UI.fm(price) + " × 2") + (kmT ? " · " + kmT : ""), q: 2, a: price == null ? null : price * 2, kind: "travel" }]),
-      { t: v.ent + " داخلي", note: "الدرجة " + CLS_NAME[p.cls], a: st.classAmount[p.cls], kind: "class" }
+      { t: v.ent + " داخلي", note: "الدرجة " + CLS_NAME[p.cls], a: amtOn(st.classAmount, p.cls, v.d), kind: "class" }
     ];
   }
 
   function tripLines(ch, i) {
-    const st = S.settings, v = ch[i].v, pr = st.prices[v.city], kmT = kmText(v);
+    const st = S.settings, v = ch[i].v, pr = TL.at(st.prices[v.city], v.d), kmT = kmText(v);
     const out = [];
     if (i === 0) out.push({ t: "من دمنهور إلى " + v.ent, note: UI.fm(pr) + (kmT ? " · " + kmT : ""), q: 1, a: pr, kind: "travel", trip: true });
     else {
       const u = ch[i - 1].v, t = "من " + u.ent + " إلى " + v.ent;
       if (u.city === v.city) out.push({ t, note: "نفس المدينة · لا انتقال بين المدن", a: 0, kind: "travel", trip: true });
       else {
-        const pair = pairKey(u.city, v.city), set = st.pairs[pair];
+        const pair = pairKey(u.city, v.city), set = TL.at(st.pairs[pair], v.d);
         out.push(set != null
           ? { t, note: UI.fm(set) + " · الخط بين " + u.city + " و" + v.city, a: set, kind: "travel", pair, trip: true }
           : { t, note: "تقدير بسعر دمنهور إلى " + v.city + " · حدّد سعر الخط بين " + u.city + " و" + v.city, a: pr, kind: "travel", pair, est: true, trip: true });
@@ -498,6 +504,7 @@ const ENG = (() => {
     const est = parts.filter(l => l.est).length;
     const pair = (parts.find(l => l.est) || parts.find(l => l.pair) || {}).pair;
     const line = { t: "من دمنهور إلى " + ents.join(" ثم ") + " والعودة", note: parts.filter(l => l.a !== 0).map(l => UI.fm(l.a)).join(" + ") + (est ? " · يتضمن سعراً تقديرياً" : ""), a: parts.reduce((s, l) => s + l.a, 0), kind: "travel", trip: true };
+    line.legs = parts.map(l => ({ t: l.t, a: l.a, est: !!l.est }));
     if (est) { line.est = true; line.estN = est; }
     if (pair) line.pair = pair;
     const out = new Map();
@@ -507,11 +514,17 @@ const ENG = (() => {
 
   function compose(res) {
     const st = S.settings;
-    const merged = st.mergeTrips ? mergeRoute(res) : res;
-    if (!st.hideZero) return merged;
-    const out = new Map();
-    for (const [v, ls] of merged) out.set(v, ls.filter(l => l.a !== 0));
-    return out;
+    const full = st.mergeTrips ? mergeRoute(res) : res;
+    if (!st.hideZero) return { lines: full, full };
+    const lines = new Map();
+    for (const [v, ls] of full) lines.set(v, ls.filter(l => l.a !== 0));
+    return { lines, full };
+  }
+
+  function routeOf(res) {
+    if (!S.settings.mergeTrips) return null;
+    const vs = [...res].filter(([, ls]) => ls.some(l => l.trip)).map(([v]) => v);
+    return vs.length > 1 ? vs : null;
   }
 
   const total = ls => { let s = 0; for (const l of ls) { if (l.a == null) return null; s += l.a; } return s; };
@@ -536,7 +549,7 @@ const ENG = (() => {
     for (const [k, g] of groups) {
       g.sort((a, b) => a.v.ord - b.v.ord);
       const act = solve(g, false);
-      const plan = { act, view: compose(act), altOf: null };
+      const plan = { act, ...compose(act), route: routeOf(act), altOf: null };
       mark(act, g[0].v.d);
       const fc = g.findIndex(s => s.p.car);
       if (fc >= 0) {
@@ -586,7 +599,7 @@ const ENG = (() => {
         const car = r.car || (cp ? cp.has(n) : false);
         const ex = v.parts.get(k);
         if (ex) ex.car = ex.car && car;
-        else { const sp = st.people[k] || { name: n, cls: st.defaultClass }; v.parts.set(k, { key: k, name: sp.name, cls: sp.cls, car }); }
+        else { const sp = st.people[k] || { name: n, cls: st.defaultClass }; v.parts.set(k, { key: k, name: sp.name, cls: TL.at(sp.cls, r.d) ?? st.defaultClass, car }); }
       }
     }
     const legs = [...map.values()].sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : a.ent.localeCompare(b.ent, "ar"));
@@ -606,8 +619,8 @@ const ENG = (() => {
       v.V = G;
       v.carN = v.people.filter(p => p.car).length;
       v.mode = v.carN === 0 ? "nocar" : v.carN === v.people.length ? "car" : "mixed";
-      v.km = kmOf(v.city);
-      v.far = isFar(v.city);
+      v.km = kmOf(v.city, v.d);
+      v.far = isFar(v.city, v.d);
       v.zero = ZS.has(v.ek);
       v.band = bandOf(v.city, v.km, v.far);
       v.s = NZ(v.ent + " " + (v.city || "") + " " + v.g + " " + v.type + " " + v.people.map(p => p.name).join(" "));
@@ -618,12 +631,13 @@ const ENG = (() => {
       v.sum = 0; v.miss = 0; v.est = 0;
       for (const p of v.people) {
         const pl = plans.get(p.key + "|" + v.d);
-        const ls = pl.view.get(v), raw = pl.act.get(v);
+        const ls = pl.lines.get(v), full = pl.full.get(v), raw = pl.act.get(v);
+        const route = pl.route && pl.route.includes(v) ? { ids: pl.route.map(x => x.id + "|" + p.key) } : null;
         let sum = 0, miss = 0, est = 0;
         const k = { travel: 0, class: 0, service: 0, allow: 0 };
         for (const l of ls) { if (l.est) est += l.estN || 1; if (l.a == null) miss++; else { sum += l.a; if (l.kind in k) k[l.kind] += l.a; } }
         const alt = p.car ? pl.altOf.get(v) : (miss ? null : sum);
-        items.push({ id: v.id + "|" + p.key, v, p, ls, raw, sum, miss, est, k, alt, save: p.car && alt != null ? alt - sum : 0 });
+        items.push({ id: v.id + "|" + p.key, v, p, ls, full, raw, route, hid: full.length - ls.length, sum, miss, est, k, alt, save: p.car && alt != null ? alt - sum : 0 });
         v.sum += sum; v.miss += miss; v.est += est;
         inc(meta.people, p.key, p.name);
       }
@@ -708,8 +722,10 @@ const ENG = (() => {
     const pm = new Map();
     for (const it of items) {
       let o = pm.get(it.p.key);
-      if (!o) pm.set(it.p.key, o = { key: it.p.key, name: it.p.name, cls: it.p.cls, items: [], vset: new Set(), visits: 0, sum: 0, miss: 0, est: 0, car: 0, nocar: 0, zero: 0, plan: 0, insp: 0, other: 0, km: 0, far: 0, carSum: 0, alt: 0, save: 0, altMiss: 0, k: { travel: 0, class: 0, service: 0, allow: 0 } });
+      if (!o) pm.set(it.p.key, o = { key: it.p.key, name: it.p.name, cls: it.p.cls, clsSeq: [], items: [], vset: new Set(), visits: 0, sum: 0, miss: 0, est: 0, car: 0, nocar: 0, zero: 0, plan: 0, insp: 0, other: 0, km: 0, far: 0, carSum: 0, alt: 0, save: 0, altMiss: 0, k: { travel: 0, class: 0, service: 0, allow: 0 } });
       o.items.push(it);
+      o.cls = it.p.cls;
+      if (o.clsSeq[o.clsSeq.length - 1] !== it.p.cls) o.clsSeq.push(it.p.cls);
       if (!o.vset.has(it.v.V)) { o.vset.add(it.v.V); o[it.v.cat]++; }
       if (it.p.car) { o.carSum += it.sum; if (it.alt == null) o.altMiss++; else { o.alt += it.alt; o.save += it.save; } }
       o.sum += it.sum; o.miss += it.miss; o.est += it.est;
@@ -772,5 +788,5 @@ const ENG = (() => {
     return res;
   }
 
-  return { M, KINDS, CAT_LABEL, FACET_KEYS, facets, purposeLabel, amtOf, analyze, remap, rememberCols, headersOf, mergeRows, build, filter, registerPeople, purposeCat, personKey, toDate, dateParts, splitPeople, BANDS, bandLabel, kmOf, isFar, zeroHit, resolve: e => (resolver || (resolver = makeResolver()))(e), SETTING_SHEETS, HEAD_KEYS: ["d", "e", "g", "p", "c"] };
+  return { M, KINDS, CAT_LABEL, FACET_KEYS, facets, purposeLabel, amtOf, analyze, remap, rememberCols, headersOf, mergeRows, build, filter, registerPeople, purposeCat, personKey, toDate, dateParts, splitPeople, BANDS, bandLabel, kmOf, isFar, zeroHit, clsLabel, resolve: e => (resolver || (resolver = makeResolver()))(e), SETTING_SHEETS, HEAD_KEYS: ["d", "e", "g", "p", "c"] };
 })();

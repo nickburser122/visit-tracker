@@ -943,3 +943,17 @@ button.tag:hover{filter:brightness(.96)}
 .tag.sv,td.sv{color:var(--sage-ink)}
 .tag.sv{background:var(--sage-bg)}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+.tl-cell{display:inline-flex;align-items:center;gap:6px}
+.tl-btn{color:var(--mu)}
+.tl-btn.on{color:var(--acc-ink);background:var(--acc-bg);border-color:var(--acc-ln)}
+.tl-chip{gap:8px;padding:5px 12px;border-color:var(--acc-ln);background:var(--acc-bg);color:var(--acc-ink)}
+.tl-chip small{color:var(--mu);font-size:11px}
+.tl-t{width:100%}
+.tl-t .dt{width:142px;direction:ltr;text-align:center;padding:6px 10px}
+.tl-t select.txt{padding:6px 10px}
+.tl-note{min-height:18px;margin-top:8px}
+.tl-note.bad{color:var(--bad)}
+.legs{margin-top:4px}
+.legs summary{cursor:pointer;color:var(--mu);font-size:12px;width:max-content}
+.legs summary:hover{color:var(--mk)}
+.legs div{display:flex;justify-content:space-between;gap:14px;font-size:12px;color:var(--mu);padding:2px 0}
